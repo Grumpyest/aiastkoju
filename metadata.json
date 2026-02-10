@@ -1,0 +1,7 @@
+{
+  "name": "Aiast Koju - Virtuaalne Aedniku Turg",
+  "description": "Virtuaalne turg, kus inimesed saavad osta ja müüa aiasaadusi, seemneid, istikuid ning hoidiseid otse tootjalt.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
