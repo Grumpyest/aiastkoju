@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks: {
               react:["react", "react-dom"],
-              charts:["reacharts"],
+              charts:["recharts"],
             },
           },
         },
