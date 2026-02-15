@@ -24,3 +24,7 @@ export const initialProducts: Product[] = [
     reviewsCount: 12
   }
 ];
+
+export const initialOrders: Order[] = [];
+
+export const initialReviews: Review[] = [];
