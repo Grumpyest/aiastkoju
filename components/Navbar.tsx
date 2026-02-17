@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, UserRole, Language, CartItem, Product } from '../types';
+import { supabase } from '../supabaseClient';
 
 interface NavbarProps {
   currentView: string;
@@ -45,67 +46,127 @@ const Navbar: React.FC<NavbarProps> = ({
     return acc + (product?.price || 0) * item.quantity;
   }, 0);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setUser({
-      id: 'u-logged',
-      name: loginData.email.includes('@') ? loginData.email.split('@')[0] : loginData.email,
-      email: loginData.email.includes('@') ? loginData.email : `${loginData.email}@placeholder.com`,
-      role: UserRole.BUYER,
-      avatar: `https://i.pravatar.cc/150?u=${loginData.email}`
-    });
-    setAuthModal('none');
-    if (onNotify) onNotify('Sisselogimine õnnestus!', 'success');
-  };
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: loginData.email,
+    password: loginData.password,
+  });
 
-    if (regData.password !== regData.confirmPassword) {
-      if (onNotify) onNotify("Paroolid ei ühti!", "error");
+  if (error || !data.user) {
+    onNotify?.(error?.message || 'Login ebaõnnestus', 'error');
+    return;
+  }
+
+  // Kontroll: kas profiles rida olemas?
+  const { data: profile, error: pErr } = await supabase
+    .from('profiles')
+    .select('id,email,full_name,phone,is_seller')
+    .eq('id', data.user.id)
+    .maybeSingle();
+
+  if (pErr || !profile) {
+    await supabase.auth.signOut();
+    onNotify?.('Sisse logimine keelatud: profiili ei leitud andmebaasist.', 'error');
+    return;
+  }
+
+  setUser({
+    id: profile.id,
+    name: profile.full_name || (profile.email?.split('@')[0] ?? 'Kasutaja'),
+    email: profile.email || data.user.email || '',
+    phone: profile.phone || undefined,
+    role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
+    avatar: `https://i.pravatar.cc/150?u=${profile.id}`,
+  });
+
+  setAuthModal('none');
+  onNotify?.('Sisselogimine õnnestus!', 'success');
+};
+
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (regData.password !== regData.confirmPassword) {
+    onNotify?.("Paroolid ei ühti!", "error");
+    return;
+  }
+
+  if (regData.role === UserRole.GARDENER) {
+    if (!regData.termsAccepted) {
+      onNotify?.("Aednikuna liitumiseks pead nõustuma tingimustega!", "error");
       return;
     }
+    if (!regData.phone || !regData.location) {
+      onNotify?.("Aednikuna registreerimiseks on telefon ja asukoht kohustuslikud!", "error");
+      return;
+    }
+  }
 
-    if (regData.role === UserRole.GARDENER) {
-      if (!regData.termsAccepted) {
-        if (onNotify) onNotify("Aednikuna liitumiseks pead nõustuma tingimustega!", "error");
-        return;
-      }
-      if (!regData.phone || !regData.location) {
-        if (onNotify) onNotify("Aednikuna registreerimiseks on telefon ja asukoht kohustuslikud!", "error");
-        return;
+  const { data, error } = await supabase.auth.signUp({
+    email: regData.email,
+    password: regData.password,
+    options: {
+      data: {
+        full_name: regData.name,
+        phone: regData.phone,
+        is_seller: regData.role === UserRole.GARDENER,
       }
     }
-    
-    setUser({
-      id: `u-${Math.random().toString(36).substring(2, 7)}`,
-      name: regData.name || regData.email.split('@')[0] || 'Kasutaja',
-      email: regData.email,
-      phone: regData.phone,
-      location: regData.location,
-      role: regData.role,
-      avatar: `https://i.pravatar.cc/150?u=${regData.email}`,
-      bankDetails: {
-        cardNumber: regData.cardNumber,
-        expiry: regData.expiry,
-        cvv: regData.cvv
-      }
-    });
+  });
+
+  if (error) {
+    onNotify?.(error.message, 'error');
+    return;
+  }
+
+  // Kui email confirmation on sees, session võib olla null
+  if (!data.session) {
     setAuthModal('none');
-    if (onNotify) onNotify('Konto loodud ja sisse logitud!', 'success');
-  };
+    onNotify?.('Konto loodud! Palun kinnita e-post ja logi siis sisse.', 'success');
+    return;
+  }
 
-  const handleLogout = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    localStorage.removeItem('user');
-    setUser(null);
-    setCurrentView('home');
-    setIsMenuOpen(false);
-    if (onNotify) onNotify('Oled välja logitud.', 'success');
-  };
+  // Kui session olemas, kontrolli profiles (ja kui pole, signOut)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id,email,full_name,phone,is_seller')
+    .eq('id', data.user!.id)
+    .maybeSingle();
+
+  if (!profile) {
+    await supabase.auth.signOut();
+    onNotify?.('Konto loodi, aga profiili ei tekkinud. Kontrolli triggerit/RLS-i.', 'error');
+    return;
+  }
+
+  setUser({
+    id: profile.id,
+    name: profile.full_name || regData.email.split('@')[0] || 'Kasutaja',
+    email: profile.email || regData.email,
+    phone: profile.phone || undefined,
+    location: regData.location || undefined,
+    role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
+    avatar: `https://i.pravatar.cc/150?u=${profile.id}`,
+  });
+
+  setAuthModal('none');
+  onNotify?.('Konto loodud ja sisse logitud!', 'success');
+};
+
+  const handleLogout = async (e?: React.MouseEvent) => {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  await supabase.auth.signOut();
+  localStorage.removeItem('user');
+  setUser(null);
+  setCurrentView('home');
+  setIsMenuOpen(false);
+  onNotify?.('Oled välja logitud.', 'success');
+};
 
   const navigateTo = (view: any) => {
     setCurrentView(view);

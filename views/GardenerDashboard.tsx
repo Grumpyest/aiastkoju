@@ -50,6 +50,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   
   const totalRevenue = myOrders.filter(o => o.status === OrderStatus.COMPLETED).reduce((acc, curr) => acc + curr.total, 0);
   const pendingOrdersCount = myOrders.filter(o => o.status === OrderStatus.NEW).length;
+  const inProgressOrdersCount = myOrders.filter(o => o.status === OrderStatus.CONFIRMED).length;
 
   const chartData = useMemo(() => {
     return myProducts.map(p => {
@@ -180,12 +181,25 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
           { id: 'reviews', label: 'Arvustused', icon: 'fa-star' }
         ].map(tab => (
           <button 
-            key={tab.id} 
-            onClick={() => setActiveTab(tab.id as any)} 
-            className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-emerald-700 shadow-md' : 'text-stone-500 hover:text-stone-900'}`}
-          >
-            <i className={`fa-solid ${tab.icon} text-xs`}></i> {tab.label}
-          </button>
+  key={tab.id} 
+  onClick={() => setActiveTab(tab.id as any)} 
+  className={`relative flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-emerald-700 shadow-md' : 'text-stone-500 hover:text-stone-900'}`}
+>
+  <i className={`fa-solid ${tab.icon} text-xs`}></i> 
+  {tab.label}
+
+  {tab.id === 'orders' && activeTab !== 'orders' && pendingOrdersCount > 0 && (
+    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">
+      {pendingOrdersCount}
+    </span>
+  )}
+
+  {tab.id === 'orders' && activeTab !== 'orders' && pendingOrdersCount === 0 && inProgressOrdersCount > 0 && (
+    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-white text-[10px] font-black flex items-center justify-center">
+      {inProgressOrdersCount}
+    </span>
+  )}
+</button>
         ))}
       </div>
 

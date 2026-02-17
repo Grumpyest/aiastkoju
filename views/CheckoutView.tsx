@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { User, Product, CartItem, Order, OrderStatus } from '../types';
+import { supabase } from '../supabaseClient';
 
 interface CheckoutViewProps {
   user: User;
@@ -38,14 +39,49 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ user, cart, products, onCom
 
   const total = cartItemsWithDetails.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
     const sellers = Object.keys(itemsBySeller);
-    const newOrders: Order[] = sellers.map(sellerId => {
+    const createdOrders: Order[] = [];
+
+    for (const sellerId of sellers) {
       const sellerItems = itemsBySeller[sellerId];
-      return {
-        id: `ord-${Math.random().toString(36).slice(2, 11)}`,
+
+      const totalAmount = sellerItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+
+      // 1) insert order header
+      const { data: orderRow, error: oErr } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: user.id,
+          total_amount: totalAmount,
+          status: 'new'
+        })
+        .select('*')
+        .single();
+
+      if (oErr) throw oErr;
+
+      // 2) insert order items
+      const itemsPayload = sellerItems.map(si => ({
+        order_id: orderRow.id,
+        product_id: Number(si.productId),
+        seller_id: si.sellerId,
+        quantity: si.quantity,
+        price_at_purchase: si.price
+      }));
+
+      const { error: iErr } = await supabase
+        .from('order_items')
+        .insert(itemsPayload);
+
+      if (iErr) throw iErr;
+
+      // 3) map tagasi app Order tüübiks (et su UI töötab)
+      createdOrders.push({
+        id: String(orderRow.id),
         buyerId: user.id,
         buyerName: formData.name,
         buyerPhone: formData.phone,
@@ -53,20 +89,23 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ user, cart, products, onCom
         sellerId: sellerId,
         sellerLocation: sellerItems[0].sellerLocation,
         status: OrderStatus.NEW,
-        total: sellerItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0),
-        items: sellerItems.map(si => ({ 
-          productId: si.productId, 
-          title: si.title, 
-          qty: si.quantity, 
-          price: si.price 
+        total: totalAmount,
+        items: sellerItems.map(si => ({
+          productId: si.productId,
+          title: si.title,
+          qty: si.quantity,
+          price: si.price
         })),
-        createdAt: new Date().toISOString(),
+        createdAt: orderRow.created_at,
         deliveryAddress: formData.address
-      };
-    });
+      });
+    }
 
-    onComplete(newOrders);
-  };
+    onComplete(createdOrders);
+  } catch (err: any) {
+    alert(err?.message || 'Tellimuse salvestamine ebaõnnestus');
+  }
+};
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">

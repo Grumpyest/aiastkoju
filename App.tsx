@@ -11,25 +11,22 @@ import ProductDetail from './views/ProductDetail';
 import OrdersView from './views/OrdersView';
 import ProfileView from './views/ProfileView';
 import CheckoutView from './views/CheckoutView';
-import { initialProducts, initialOrders, initialReviews } from './mockData';
+import { supabase } from './supabaseClient';
 
 const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || Language.ET);
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const saved = localStorage.getItem('user');
+  return saved ? JSON.parse(saved) : null;
+});
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('cart');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('products');
-    return saved ? JSON.parse(saved) : initialProducts;
-  });
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   
   const [currentView, setCurrentView] = useState<'home' | 'catalog' | 'dashboard' | 'admin' | 'product' | 'orders' | 'profile' | 'checkout'>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -48,10 +45,84 @@ const App: React.FC = () => {
     setTimeout(() => setToast(null), 5000);
   };
 
+useEffect(() => {
+  // hoia user püsivalt sessioni järgi
+  const init = async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    const u = sess.session?.user;
+
+    if (u) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id,email,full_name,phone,is_seller')
+        .eq('id', u.id)
+        .maybeSingle();
+
+      if (profile) {
+        setUser({
+          id: profile.id,
+          name: profile.full_name || (profile.email?.split('@')[0] ?? 'Kasutaja'),
+          email: profile.email || u.email || '',
+          phone: profile.phone || undefined,
+          role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
+          avatar: `https://i.pravatar.cc/150?u=${profile.id}`,
+        });
+      } else {
+        await supabase.auth.signOut();
+        setUser(null);
+      }
+    }
+  };
+
+  init();
+
+  const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session?.user) setUser(null);
+  });
+
+  return () => { sub.subscription.unsubscribe(); };
+}, []);
+
+useEffect(() => {
+  const loadProducts = async () => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      showToast(error.message, 'error');
+      return;
+    }
+
+    const mapped: Product[] = (data || []).map((p: any) => ({
+      id: String(p.id),
+      sellerId: p.seller_id,
+      sellerName: 'Müüja',
+      sellerLocation: '',
+      title: p.name,
+      description: p.description || '',
+      category: p.category || 'Muu',
+      price: Number(p.price || 0),
+      unit: p.unit || 'tk',
+      stockQty: 999,
+      minOrderQty: 1,
+      image: p.image_url || 'https://picsum.photos/600/400',
+      images: [],
+      isActive: true,
+      rating: 0,
+      reviewsCount: 0,
+    }));
+
+    setProducts(mapped);
+  };
+
+  loadProducts();
+}, []);
+
   useEffect(() => { localStorage.setItem('lang', language); }, [language]);
   useEffect(() => { localStorage.setItem('user', JSON.stringify(user)); }, [user]);
   useEffect(() => { localStorage.setItem('cart', JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { localStorage.setItem('products', JSON.stringify(products)); }, [products]);
 
   const t = useMemo(() => TRANSLATIONS[language], [language]);
 
