@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { User, Product, Order, OrderStatus, ProductStatus, Review } from '../types';
 import { CATEGORIES, UNITS } from '../constants';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, YAxis } from 'recharts';
+import { supabase } from '../supabaseClient';
 
 interface GardenerDashboardProps {
   user: User;
@@ -25,6 +26,8 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const extraFileInputRef = useRef<HTMLInputElement>(null);
@@ -69,71 +72,147 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     if (onNotify) onNotify(`Tellimuse staatus uuendatud: ${newStatus}`, 'success');
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, mode: 'add' | 'edit', isExtra: boolean = false) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        if (mode === 'add') {
-          if (isExtra) {
-            setNewProduct(prev => ({ ...prev, images: [...(prev.images || []), base64String] }));
-          } else {
-            setNewProduct(prev => ({ ...prev, image: base64String }));
-          }
-        } else if (mode === 'edit' && editingProduct) {
-          if (isExtra) {
-            setEditingProduct(prev => prev ? ({ ...prev, images: [...(prev.images || []), base64String] }) : null);
-          } else {
-            setEditingProduct(prev => prev ? ({ ...prev, image: base64String }) : null);
-          }
-        }
-      };
-      reader.readAsDataURL(files[0]);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, mode: 'add' | 'edit', isExtra = false) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  const file = files[0];
+
+  if (mode === 'add') {
+    if (isExtra) {
+      setExtraImageFiles(prev => [...prev, file]);
+      // preview UI jaoks:
+      const preview = URL.createObjectURL(file);
+      setNewProduct(prev => ({ ...prev, images: [...(prev.images || []), preview] }));
+    } else {
+      setMainImageFile(file);
+      const preview = URL.createObjectURL(file);
+      setNewProduct(prev => ({ ...prev, image: preview }));
     }
-  };
+  }
+};
 
-  const removeImage = (index: number, mode: 'add' | 'edit') => {
-    if (mode === 'add') {
-      setNewProduct(prev => ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }));
-    } else if (mode === 'edit' && editingProduct) {
-      setEditingProduct(prev => prev ? ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }) : null);
+const safeName = (name: string) =>
+  name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+const uploadToStorage = async (file: File, path: string) => {
+  const { error } = await supabase.storage.from('product-images').upload(path, file, {
+    cacheControl: '3600',
+    upsert: true,
+    contentType: file.type,
+  });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+  return data.publicUrl;
+};
+
+ const removeImage = (index: number, mode: 'add' | 'edit') => {
+  if (mode === 'add') {
+    setNewProduct(prev => ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }));
+    setExtraImageFiles(prev => prev.filter((_, i) => i !== index));
+  } else if (mode === 'edit' && editingProduct) {
+    setEditingProduct(prev => prev ? ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }) : null);
+  }
+};
+
+const handleSaveNewProduct = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!newProduct.title) return;
+
+  try {
+    // 1) loo product rida (ilma image_url-ita esialgu)
+    const { data: created, error: createErr } = await supabase
+      .from('products')
+      .insert([{
+        seller_id: user.id,
+        name: newProduct.title,
+        description: newProduct.description ?? '',
+        category: newProduct.category ?? CATEGORIES[0],
+        price: Number(newProduct.price ?? 0),
+        unit: newProduct.unit ?? UNITS[0],
+        stock_qty: Number(newProduct.stockQty ?? 0),
+        min_order_qty: Number(newProduct.minOrderQty ?? 1),
+        status: 'ACTIVE',
+        is_active: true,
+      }])
+      .select('*')
+      .single();
+
+    if (createErr || !created) throw createErr;
+
+    // 2) upload main image
+    let mainUrl = created.image_url || DEFAULT_IMAGE;
+    if (mainImageFile) {
+      const path = `${user.id}/${created.id}/main-${Date.now()}-${safeName(mainImageFile.name)}`;
+      mainUrl = await uploadToStorage(mainImageFile, path);
+
+      const { error: upErr } = await supabase
+        .from('products')
+        .update({ image_url: mainUrl })
+        .eq('id', created.id);
+
+      if (upErr) throw upErr;
     }
-  };
 
-  const handleSaveNewProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProduct.title) return;
+    // 3) upload extra images + insert gallery rows
+    for (let i = 0; i < extraImageFiles.length; i++) {
+      const f = extraImageFiles[i];
+      const path = `${user.id}/${created.id}/extra-${i}-${Date.now()}-${safeName(f.name)}`;
+      const url = await uploadToStorage(f, path);
 
+      const { error: imgErr } = await supabase
+        .from('product_images')
+        .insert([{ product_id: created.id, url, sort_order: i }]);
+
+      if (imgErr) throw imgErr;
+    }
+
+    // 4) lisa UI state’i (instant)
     const productToAdd: Product = {
-      id: `p-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      sellerId: user.id,
+      id: created.id,
+      sellerId: created.seller_id,
       sellerName: user.name,
       sellerLocation: user.location || 'Määramata',
-      title: newProduct.title || '',
-      description: newProduct.description || '',
-      category: newProduct.category || CATEGORIES[0],
-      price: newProduct.price || 0,
-      unit: newProduct.unit || UNITS[0],
-      stockQty: newProduct.stockQty || 0,
-      minOrderQty: newProduct.minOrderQty || 1,
-      image: newProduct.image || DEFAULT_IMAGE,
-      images: newProduct.images || [],
-      isActive: true,
+      title: created.name,
+      description: created.description || '',
+      category: created.category || CATEGORIES[0],
+      price: Number(created.price || 0),
+      unit: created.unit || UNITS[0],
+      stockQty: created.stock_qty ?? 0,
+      minOrderQty: created.min_order_qty ?? 1,
+      image: mainUrl,
+      images: (newProduct.images || []).filter(Boolean), // previews; hiljem laadime päriselt DB-st
+      isActive: created.is_active === true,
       status: ProductStatus.ACTIVE,
       rating: 0,
-      reviewsCount: 0
+      reviewsCount: 0,
     };
-    
+
     setProducts(prev => [productToAdd, ...prev]);
+
+    // reset
     setIsAddModalOpen(false);
+    setMainImageFile(null);
+    setExtraImageFiles([]);
     setNewProduct({
-      title: '', description: '', category: CATEGORIES[0], unit: UNITS[0],
-      price: 0, stockQty: 0, minOrderQty: 1, image: DEFAULT_IMAGE, images: [],
+      title: '',
+      description: '',
+      category: CATEGORIES[0],
+      unit: UNITS[0],
+      price: 0,
+      stockQty: 0,
+      minOrderQty: 1,
+      image: DEFAULT_IMAGE,
+      images: [],
       status: ProductStatus.ACTIVE
     });
-    if (onNotify) onNotify('Toode edukalt lisatud! See on nüüd kataloogis nähtav.', 'success');
-  };
+
+    onNotify?.('Toode lisatud! Teised näevad kataloogis.', 'success');
+  } catch (err: any) {
+    onNotify?.(err?.message || 'Toote lisamine ebaõnnestus', 'error');
+  }
+};
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();

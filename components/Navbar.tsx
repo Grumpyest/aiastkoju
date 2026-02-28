@@ -49,10 +49,18 @@ const Navbar: React.FC<NavbarProps> = ({
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: loginData.email,
-    password: loginData.password,
-  });
+const { data, error } = await supabase.auth.signUp({
+  email: regData.email,
+  password: regData.password,
+  options: {
+    data: {
+      full_name: regData.name,
+      phone: regData.phone,
+      location: regData.location,
+      is_seller: regData.role === UserRole.GARDENER,
+    }
+  }
+});
 
   if (error || !data.user) {
     onNotify?.(error?.message || 'Login ebaõnnestus', 'error');

@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
+import { supabase } from '../supabaseClient';
 
 interface ProfileViewProps {
   user: User;
@@ -26,43 +27,106 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
     cvv: user.bankDetails?.cvv || '',
   });
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setUser({ 
-      ...user, 
-      ...formData, 
-      bankDetails: bankData 
+  const handleSave = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: formData.name,
+        phone: formData.phone || null,
+        location: formData.location || null,
+        avatar_url: formData.avatar || null,
+      })
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    // uuenda lokaalne state
+    setUser({
+      ...user,
+      name: formData.name,
+      phone: formData.phone || undefined,
+      location: formData.location || undefined,
+      avatar: formData.avatar || undefined,
+      bankDetails: bankData, // prototüübis ok, aga ära pane DB-sse
     });
-    if (onNotify) onNotify('Profiil edukalt uuendatud!', 'success');
-  };
 
-  const toggleGardenerRole = () => {
+    onNotify?.('Profiil edukalt uuendatud!', 'success');
+  } catch (err: any) {
+    onNotify?.(err?.message || 'Profiili salvestamine ebaõnnestus', 'error');
+  }
+};
+
+ const toggleGardenerRole = async () => {
+  try {
     if (user.role === UserRole.GARDENER) {
-      if (confirm("Kas soovid tõesti aedniku staatusest loobuda? Sinu tooted ei ole enam avalikult nähtavad.")) {
-        const updatedUser: User = { ...user, role: UserRole.BUYER };
-        setUser(updatedUser);
-        if (onNotify) onNotify('Oled nüüd uuesti Ostja rollis.', 'success');
-      }
-    } else {
-      if (!formData.phone.trim() || !formData.location.trim()) {
-        if (onNotify) onNotify("Aedniku staatuse aktiveerimiseks pead esmalt täitma oma profiilis telefoni ja asukoha väljad!", "error");
-        return;
-      }
+      const ok = confirm(
+        'Kas soovid tõesti aedniku staatusest loobuda? Sinu tooted ei ole enam avalikult nähtavad.'
+      );
+      if (!ok) return;
 
-      const confirmationMsg = `Soovid hakata Aednikuks? Rakendub aedniku kuutasu 1€, mis debiteeritakse Sinu kontolt automaatselt iga 30 päeva järel. Kas nõustud?`;
+      // 1) profiil ostjaks
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_seller: false })
+        .eq('id', user.id);
 
-      if (confirm(confirmationMsg)) {
-        const updatedUser: User = { 
-          ...user, 
-          role: UserRole.GARDENER,
-          phone: formData.phone,
-          location: formData.location
-        };
-        setUser(updatedUser);
-        if (onNotify) onNotify('Oled nüüd Aednik! Päisesse lisandus "Töölaud".', 'success');
-      }
+      if (error) throw error;
+
+      await supabase
+        .from('products')
+        .update({ is_active: false })
+        .eq('seller_id', user.id);
+
+      setUser({ ...user, role: UserRole.BUYER });
+      onNotify?.('Oled nüüd uuesti Ostja rollis.', 'success');
+      return;
     }
-  };
+
+    // kui ostja -> müüjaks
+    if (!formData.phone.trim() || !formData.location.trim()) {
+      onNotify?.(
+        'Aedniku staatuse aktiveerimiseks pead esmalt täitma telefoni ja asukoha!',
+        'error'
+      );
+      return;
+    }
+
+    const ok = confirm(
+      'Soovid hakata Aednikuks? Rakendub aedniku kuutasu 1€/kuu (prototüüp). Kas nõustud?'
+    );
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_seller: true,
+        phone: formData.phone,
+        location: formData.location,
+      })
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    await supabase
+      .from('products')
+      .update({ is_active: true })
+      .eq('seller_id', user.id);
+
+    setUser({
+      ...user,
+      role: UserRole.GARDENER,
+      phone: formData.phone,
+      location: formData.location,
+    });
+
+    onNotify?.('Oled nüüd Aednik! Päisesse lisandus "Töölaud".', 'success');
+  } catch (err: any) {
+    onNotify?.(err?.message || 'Rolli vahetus ebaõnnestus', 'error');
+  }
+};
 
   const handleLogout = (e?: React.MouseEvent) => {
     if (e) {

@@ -63,7 +63,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
               type="submit"
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg active:scale-95"
             >
-              Otsi turgu
+              Otsi
             </button>
           </form>
         </div>
