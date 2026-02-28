@@ -126,7 +126,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       .from('products')
       .insert([{
         seller_id: user.id,
-        name: newProduct.title,
+        title: newProduct.title,
         description: newProduct.description ?? '',
         category: newProduct.category ?? CATEGORIES[0],
         price: Number(newProduct.price ?? 0),
@@ -174,7 +174,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       sellerId: created.seller_id,
       sellerName: user.name,
       sellerLocation: user.location || 'Määramata',
-      title: created.name,
+      title: created.title,
       description: created.description || '',
       category: created.category || CATEGORIES[0],
       price: Number(created.price || 0),
