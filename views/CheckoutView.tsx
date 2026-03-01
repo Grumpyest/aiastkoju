@@ -57,7 +57,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         .insert({
           buyer_id: user.id,
           total: totalAmount,
-          status: 'new'
+          status: 'paid'
         })
         .select('*')
         .single();
