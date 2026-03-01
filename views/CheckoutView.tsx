@@ -56,7 +56,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         .from('orders')
         .insert({
           buyer_id: user.id,
-          total_amount: totalAmount,
+          total: totalAmount,
           status: 'new'
         })
         .select('*')
@@ -67,7 +67,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       // 2) insert order items
       const itemsPayload = sellerItems.map(si => ({
         order_id: orderRow.id,
-        product_id: Number(si.productId),
+        product_id: si.productId,
         seller_id: si.sellerId,
         quantity: si.quantity,
         price_at_purchase: si.price
