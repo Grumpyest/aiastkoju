@@ -56,16 +56,25 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const inProgressOrdersCount = myOrders.filter(o => o.status === OrderStatus.CONFIRMED).length;
 
   const chartData = useMemo(() => {
-    return myProducts.map(p => {
+  return myProducts
+    .map(p => {
+      const title = (p.title ?? '').toString();
+
       const revenue = myOrders
         .filter(o => o.status === OrderStatus.COMPLETED)
         .reduce((acc, o) => {
           const item = o.items.find(i => i.productId === p.id);
           return acc + (item ? item.price * item.qty : 0);
         }, 0);
-      return { name: p.title.length > 10 ? p.title.substring(0, 10) + '...' : p.title, fullName: p.title, revenue };
-    }).filter(d => d.revenue > 0);
-  }, [myProducts, myOrders]);
+
+      return {
+        name: title.length > 10 ? title.substring(0, 10) + '...' : (title || '—'),
+        fullName: title || '—',
+        revenue
+      };
+    })
+    .filter(d => d.revenue > 0);
+}, [myProducts, myOrders]);
 
   const handleStatusUpdate = (orderId: string, newStatus: OrderStatus) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
@@ -396,7 +405,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
                  </div>
                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-stone-50">
                     <div>
-                      <span className="text-xl font-black text-emerald-700">{p.price.toFixed(2)}€</span>
+                      <span className="text-xl font-black text-emerald-700">{Number(p.price ?? 0).toFixed(2)}€</span>
                       <span className="text-stone-400 text-[10px] font-bold ml-1 uppercase">/ {p.unit}</span>
                     </div>
                     <span className="text-[10px] font-bold text-stone-400 uppercase bg-stone-50 px-3 py-1 rounded-full">Laos: {p.stockQty}</span>
@@ -422,14 +431,14 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
                     <i className="fa-solid fa-box-open"></i>
                   </div>
                   <div>
-                    <h4 className="font-black text-stone-900">Tellimus #{order.id.substring(4, 10).toUpperCase()}</h4>
+                    <h4 className="font-black text-stone-900">Tellimus #{String(order.id ?? '').substring(4, 10).toUpperCase()}</h4>
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
                   {getStatusBadge(order.status)}
                   <div className="text-right">
-                    <p className="text-xl font-black text-emerald-700">{order.total.toFixed(2)}€</p>
+                    <p className="text-xl font-black text-emerald-700">{Number(order.total ?? 0).toFixed(2)}€</p>
                   </div>
                 </div>
               </div>
@@ -440,7 +449,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex justify-between items-center text-sm font-medium">
                         <span className="text-stone-600">{item.title} <span className="text-stone-400 ml-1">x{item.qty}</span></span>
-                        <span className="text-stone-900">{(item.qty * item.price).toFixed(2)}€</span>
+                        <span className="text-stone-900">{(Number(item.qty ?? 0) * Number(item.price ?? 0)).toFixed(2)}€</span>
                       </div>
                     ))}
                   </div>

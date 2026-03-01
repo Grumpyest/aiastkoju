@@ -41,9 +41,14 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       return matchesSearch && matchesCat && matchesPrice;
       })
       .sort((a, b) => {
-        if (sortBy === 'price-low') return a.price - b.price;
-        if (sortBy === 'price-high') return b.price - a.price;
-        if (sortBy === 'rating') return b.rating - a.rating;
+        const ap = Number(a.price ?? 0);
+        const bp = Number(b.price ?? 0);
+        const ar = Number(a.rating ?? 0);
+        const br = Number(b.rating ?? 0);
+
+        if (sortBy === 'price-low') return ap - bp;
+        if (sortBy === 'price-high') return bp - ap;
+        if (sortBy === 'rating') return br - ar;
         return 0;
       });
   }, [products, searchTerm, selectedCat, priceRange, sortBy]);
@@ -136,13 +141,12 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                   className="relative h-56 overflow-hidden cursor-pointer"
                   onClick={() => onViewProduct(product.id)}
                 >
-                  <img src={product.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-emerald-800">
+                  <img src={product.image || '/placeholder.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.png';}}/>          <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-emerald-800">
                     {product.category}
                   </div>
                   <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="bg-emerald-600 text-white px-3 py-1 rounded-full text-[9px] font-bold uppercase shadow-lg">
-                      {product.sellerLocation?.split(' ')[0]}
+                      {(product.sellerLocation || '—').split(' ')[0]}
                     </div>
                   </div>
                 </div>
