@@ -121,7 +121,8 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
   if (!newProduct.title) return;
 
   try {
-    // 1) loo product rida (ilma image_url-ita esialgu)
+
+
     const { data: created, error: createErr } = await supabase
       .from('products')
       .insert([{
@@ -129,7 +130,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
         title: newProduct.title,
         description: newProduct.description ?? '',
         category: newProduct.category ?? CATEGORIES[0],
-        price: Number(newProduct.price ?? 0),
+        price_cents: Math.round(Number(newProduct.price ?? 0) * 100),
         unit: newProduct.unit ?? UNITS[0],
         stock_qty: Number(newProduct.stockQty ?? 0),
         min_order_qty: Number(newProduct.minOrderQty ?? 1),
@@ -177,7 +178,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       title: created.title,
       description: created.description || '',
       category: created.category || CATEGORIES[0],
-      price: Number(created.price || 0),
+      price: (created.price_cents ?? 0) / 100,
       unit: created.unit || UNITS[0],
       stockQty: created.stock_qty ?? 0,
       minOrderQty: created.min_order_qty ?? 1,
@@ -214,13 +215,33 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
   }
 };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProduct) return;
+  const handleSaveEdit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!editingProduct) return;
+
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update({
+        title: editingProduct.title,
+        description: editingProduct.description ?? '',
+        category: editingProduct.category,
+        unit: editingProduct.unit,
+        stock_qty: Number(editingProduct.stockQty ?? 0),
+        min_order_qty: Number(editingProduct.minOrderQty ?? 1),
+        price_cents: Math.round(Number(editingProduct.price ?? 0) * 100),
+      })
+      .eq('id', editingProduct.id);
+
+    if (error) throw error;
+
     setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
     setIsEditModalOpen(false);
-    if (onNotify) onNotify('Muudatused salvestatud!', 'success');
-  };
+    onNotify?.('Muudatused salvestatud!', 'success');
+  } catch (err: any) {
+    onNotify?.(err?.message || 'Muudatuste salvestamine ebaõnnestus', 'error');
+  }
+};
 
   const handleDeleteProduct = (productId: string) => {
     setProducts(prev => prev.filter(p => p.id !== productId));
@@ -547,7 +568,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Hind (€)</label>
-                  <input required type="number" step="0.01" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                  <input required type="number" step="0.01" value={newProduct.price === 0 ? '' : newProduct.price} onChange={(e)=>{const v=e.target.value; setNewProduct({...newProduct, price: v===''?0:parseFloat(v)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Ühik</label>
@@ -557,7 +578,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Laoseis</label>
-                  <input required type="number" value={newProduct.stockQty} onChange={e => setNewProduct({...newProduct, stockQty: parseInt(e.target.value) || 0})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                  <input required type="number" value={newProduct.stockQty === 0 ? '' : newProduct.stockQty} onChange={(e)=>{const v=e.target.value; setNewProduct({...newProduct, stockQty: v===''?0:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2 col-span-full">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Kirjeldus</label>
@@ -611,11 +632,11 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Hind (€)</label>
-                  <input required type="number" step="0.01" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                  <input required type="number" step="0.01" value={editingProduct.price === 0 ? '' : editingProduct.price} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, price: v===''?0:parseFloat(v)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Laoseis</label>
-                  <input required type="number" value={editingProduct.stockQty} onChange={e => setEditingProduct({...editingProduct, stockQty: parseInt(e.target.value) || 0})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                  <input required type="number" value={editingProduct.stockQty === 0 ? '' : editingProduct.stockQty} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, stockQty: v===''?0:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2 col-span-full">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Kirjeldus</label>
