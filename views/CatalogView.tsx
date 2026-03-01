@@ -30,12 +30,15 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const filteredProducts = useMemo(() => {
     return products
       .filter(p => {
-        const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              p.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              p.sellerName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCat = !selectedCat || p.category === selectedCat;
-        const matchesPrice = p.price <= priceRange;
-        return matchesSearch && matchesCat && matchesPrice;
+      const q = (searchTerm ?? '').toLowerCase();
+      const matchesSearch =
+        (p.title ?? '').toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q) ||
+        (p.sellerName ?? '').toLowerCase().includes(q);
+
+      const matchesCat = !selectedCat || p.category === selectedCat;
+      const matchesPrice = (p.price ?? 0) <= priceRange;
+      return matchesSearch && matchesCat && matchesPrice;
       })
       .sort((a, b) => {
         if (sortBy === 'price-low') return a.price - b.price;
@@ -161,7 +164,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                   <div className="mt-auto pt-6 border-t border-stone-50 flex flex-col gap-4">
                     <div className="flex justify-between items-center">
                       <div>
-                        <span className="text-2xl font-black text-stone-900">{product.price.toFixed(2)}€</span>
+                        <span className="text-2xl font-black text-stone-900">{Number(product.price ?? 0).toFixed(2)}€</span>
                         <span className="text-stone-400 text-xs font-bold ml-1 uppercase">/ {product.unit}</span>
                       </div>
                       <button 

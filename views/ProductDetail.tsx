@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Product, User, Review, UserRole, ReviewReply } from '../types';
 
 interface ProductDetailProps {
@@ -14,10 +14,20 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, user, reviews, setReviews, onAddToCart, onBuyNow, onBack, onNotify }) => {
-  const [quantity, setQuantity] = useState(product.minOrderQty);
+  const [quantity, setQuantity] = useState<number>(Number(product.minOrderQty ?? 1));
   
-  const allImages = useMemo(() => [product.image, ...(product.images || [])], [product]);
-  const [mainImage, setMainImage] = useState(allImages[0]);
+const PLACEHOLDER = "/placeholder.png";
+
+  const allImages = useMemo(
+  () => [product.image, ...(product.images || [])].filter(Boolean) as string[],
+  [product.image, product.images]
+);
+const [mainImage, setMainImage] = useState(allImages[0] ?? PLACEHOLDER);
+
+useEffect(() => {
+  setMainImage(allImages[0] ?? PLACEHOLDER);
+}, [allImages]);
+
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   const [newReviewComment, setNewReviewComment] = useState('');
@@ -106,16 +116,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, user, reviews, s
           </div>
           
           <h1 className="text-4xl font-black text-stone-900 mb-4 tracking-tight leading-tight">{product.title}</h1>
-          <p className="text-3xl text-emerald-700 font-black mb-8">{product.price.toFixed(2)}€ <span className="text-stone-400 text-sm font-medium">/ {product.unit}</span></p>
-          <p className="text-stone-600 leading-relaxed text-lg mb-10">{product.description}</p>
+          <p className="text-3xl text-emerald-700 font-black mb-8">{Number(product.price ?? 0).toFixed(2)}€ <span className="text-stone-400 text-sm font-medium">/ {product.unit ?? ''}</span></p>
+          <p className="text-stone-600 leading-relaxed text-lg mb-10">{product.description ?? ''}</p>
 
           <div className="bg-white rounded-[40px] p-8 border border-stone-100 shadow-xl shadow-stone-200/50">
             <div className="flex items-center justify-between mb-8">
-              <span className="text-stone-900 font-black text-lg">Kogus ({product.unit})</span>
+              <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
               <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
-                <button onClick={() => setQuantity(Math.max(product.minOrderQty, quantity - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
+                <button onClick={() => setQuantity(q => Math.max(Number(product.minOrderQty ?? 1), (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
                 <span className="text-xl font-black w-8 text-center">{quantity}</span>
-                <button onClick={() => setQuantity(Math.min(product.stockQty, quantity + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
+                <button onClick={() => setQuantity(q => Math.min(Number(product.stockQty ?? 999999), (q ?? 0) + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
               </div>
             </div>
             
