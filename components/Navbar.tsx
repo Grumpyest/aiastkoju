@@ -49,30 +49,23 @@ const Navbar: React.FC<NavbarProps> = ({
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
 
-const { data, error } = await supabase.auth.signUp({
-  email: regData.email,
-  password: regData.password,
-  options: {
-    data: {
-      full_name: regData.name,
-      phone: regData.phone,
-      location: regData.location,
-      is_seller: regData.role === UserRole.GARDENER,
-    }
-  }
-});
+  const email = loginData.email.trim().toLowerCase();
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: loginData.password,
+  });
 
   if (error || !data.user) {
     onNotify?.(error?.message || 'Login ebaõnnestus', 'error');
     return;
   }
 
-  // Kontroll: kas profiles rida olemas?
   const { data: profile, error: pErr } = await supabase
     .from('profiles')
-    .select('id,email,full_name,phone,is_seller')
+    .select('id,email,full_name,phone,is_seller,location,username,avatar_url')
     .eq('id', data.user.id)
-    .maybeSingle();
+    .single();
 
   if (pErr || !profile) {
     await supabase.auth.signOut();
@@ -83,10 +76,11 @@ const { data, error } = await supabase.auth.signUp({
   setUser({
     id: profile.id,
     name: profile.full_name || (profile.email?.split('@')[0] ?? 'Kasutaja'),
-    email: profile.email || data.user.email || '',
+    email: profile.email || email,
     phone: profile.phone || undefined,
+    location: profile.location || undefined,
     role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
-    avatar: `https://i.pravatar.cc/150?u=${profile.id}`,
+    avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`,
   });
 
   setAuthModal('none');
@@ -118,6 +112,7 @@ const handleRegister = async (e: React.FormEvent) => {
     options: {
       data: {
         full_name: regData.name,
+        username: regData.name,
         phone: regData.phone,
         is_seller: regData.role === UserRole.GARDENER,
       }
@@ -299,7 +294,7 @@ const handleRegister = async (e: React.FormEvent) => {
               <>
                 <h2 className="text-2xl font-black text-stone-900 mb-6">Logi sisse</h2>
                 <form onSubmit={handleLogin} className="space-y-4">
-                  <input required type="text" placeholder="E-post või kasutajanimi" value={loginData.email} onChange={e => setLoginData({...loginData, email: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
+                  <input required type="text" placeholder="E-post" value={loginData.email} onChange={e => setLoginData({...loginData, email: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
                   <input required type="password" placeholder="Parool" value={loginData.password} onChange={e => setLoginData({...loginData, password: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
                   <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-emerald-700 transition-all">Sisenen</button>
                   <p className="text-center text-xs text-stone-400 mt-4">Pole veel kontot? <button type="button" onClick={() => setAuthModal('register')} className="text-emerald-600 font-bold">Registreeru</button></p>
@@ -316,7 +311,7 @@ const handleRegister = async (e: React.FormEvent) => {
                   
                   <div className="space-y-3 pb-4 border-b border-stone-100">
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Isikuandmed</p>
-                    <input type="text" placeholder="Täisnimi (valikuline)" value={regData.name} onChange={e => setRegData({...regData, name: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
+                    <input type="text" placeholder="Kasutajanimi" value={regData.name} onChange={e => setRegData({...regData, name: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
                     <input required type="email" placeholder="E-post" value={regData.email} onChange={e => setRegData({...regData, email: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
                     
                     <input 
