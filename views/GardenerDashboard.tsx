@@ -28,6 +28,9 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
+  const [editMainImageFile, setEditMainImageFile] = useState<File | null>(null);
+  const [editExtraImageFiles, setEditExtraImageFiles] = useState<File[]>([]);
+  const [removedEditImageUrls, setRemovedEditImageUrls] = useState<string[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const extraFileInputRef = useRef<HTMLInputElement>(null);
@@ -99,6 +102,23 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
       setNewProduct(prev => ({ ...prev, image: preview }));
     }
   }
+  
+if (mode === 'edit') {
+  if (!editingProduct) return;
+
+  const preview = URL.createObjectURL(file);
+
+  if (isExtra) {
+    setEditExtraImageFiles(prev => [...prev, file]);
+    setEditingProduct(prev =>
+      prev ? ({ ...prev, images: [...(prev.images || []), preview] }) : prev
+    );
+  } else {
+    setEditMainImageFile(file);
+    setEditingProduct(prev => (prev ? ({ ...prev, image: preview }) : prev));
+  }
+}
+
 };
 
 const safeName = (name: string) =>
@@ -116,12 +136,31 @@ const uploadToStorage = async (file: File, path: string) => {
   return data.publicUrl;
 };
 
- const removeImage = (index: number, mode: 'add' | 'edit') => {
+const removeImage = (index: number, mode: 'add' | 'edit') => {
   if (mode === 'add') {
     setNewProduct(prev => ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }));
     setExtraImageFiles(prev => prev.filter((_, i) => i !== index));
-  } else if (mode === 'edit' && editingProduct) {
-    setEditingProduct(prev => prev ? ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }) : null);
+    return;
+  }
+
+  if (mode === 'edit' && editingProduct) {
+    const url = (editingProduct.images || [])[index];
+
+    if (url && !url.startsWith('blob:')) {
+      setRemovedEditImageUrls(prev => [...prev, url]);
+    }
+
+    if (url && url.startsWith('blob:')) {
+      const blobUrls = (editingProduct.images || []).filter(u => u.startsWith('blob:'));
+      const blobIndex = blobUrls.indexOf(url);
+      if (blobIndex >= 0) {
+        setEditExtraImageFiles(prev => prev.filter((_, i) => i !== blobIndex));
+      }
+    }
+
+    setEditingProduct(prev =>
+      prev ? ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }) : null
+    );
   }
 };
 
@@ -192,7 +231,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       stockQty: created.stock_qty ?? 0,
       minOrderQty: created.min_order_qty ?? 1,
       image: mainUrl,
-      images: (newProduct.images || []).filter(Boolean), // previews; hiljem laadime päriselt DB-st
+      images: (newProduct.images || []).filter(Boolean), 
       isActive: created.is_active === true,
       status: ProductStatus.ACTIVE,
       rating: 0,
@@ -224,12 +263,13 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
   }
 };
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
+const handleSaveEdit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!editingProduct) return;
 
   try {
-    const { error } = await supabase
+    // 1) update basic product fields
+    const { error: updErr } = await supabase
       .from('products')
       .update({
         title: editingProduct.title,
@@ -242,11 +282,84 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       })
       .eq('id', editingProduct.id);
 
-    if (error) throw error;
+    if (updErr) throw updErr;
 
-    setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
+    // 2) main image upload (if changed)
+    let mainUrl = editingProduct.image || DEFAULT_IMAGE;
+    if (editMainImageFile) {
+      const path = `${user.id}/${editingProduct.id}/main-${Date.now()}-${safeName(editMainImageFile.name)}`;
+      mainUrl = await uploadToStorage(editMainImageFile, path);
+
+      const { error: mainErr } = await supabase
+        .from('products')
+        .update({ image_url: mainUrl })
+        .eq('id', editingProduct.id);
+
+      if (mainErr) throw mainErr;
+    }
+
+    // 3) delete removed gallery images (DB)
+    if (removedEditImageUrls.length > 0) {
+      const { error: delErr } = await supabase
+        .from('product_images')
+        .delete()
+        .eq('product_id', editingProduct.id)
+        .in('url', removedEditImageUrls);
+
+      if (delErr) throw delErr;
+    }
+
+    // 4) add new gallery images
+    // get current max sort_order
+    let startOrder = 0;
+    {
+      const { data: maxRow } = await supabase
+        .from('product_images')
+        .select('sort_order')
+        .eq('product_id', editingProduct.id)
+        .order('sort_order', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      startOrder = (maxRow?.sort_order ?? -1) + 1;
+    }
+
+    for (let i = 0; i < editExtraImageFiles.length; i++) {
+      const f = editExtraImageFiles[i];
+      const path = `${user.id}/${editingProduct.id}/extra-${startOrder + i}-${Date.now()}-${safeName(f.name)}`;
+      const url = await uploadToStorage(f, path);
+
+      const { error: imgErr } = await supabase
+        .from('product_images')
+        .insert([{ product_id: editingProduct.id, url, sort_order: startOrder + i }]);
+
+      if (imgErr) throw imgErr;
+    }
+
+    // 5) reload gallery from DB -> correct urls
+    const { data: gallery, error: galErr } = await supabase
+      .from('product_images')
+      .select('url, sort_order')
+      .eq('product_id', editingProduct.id)
+      .order('sort_order', { ascending: true });
+
+    if (galErr) throw galErr;
+
+    const updatedProduct: Product = {
+      ...editingProduct,
+      image: mainUrl,
+      images: (gallery || []).map(r => r.url),
+    };
+
+    setProducts(prev => prev.map(p => (p.id === updatedProduct.id ? updatedProduct : p)));
+
+    // reset edit temp state
     setIsEditModalOpen(false);
-    onNotify?.('Muudatused salvestatud!', 'success');
+    setEditMainImageFile(null);
+    setEditExtraImageFiles([]);
+    setRemovedEditImageUrls([]);
+
+    onNotify?.('Muudatused salvestatud (pildid ka)!', 'success');
   } catch (err: any) {
     onNotify?.(err?.message || 'Muudatuste salvestamine ebaõnnestus', 'error');
   }
@@ -266,6 +379,28 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       case OrderStatus.CANCELLED: return <span className="bg-stone-100 text-stone-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Tühistatud</span>;
     }
   };
+
+  const openEdit = async (p: Product) => {
+  setRemovedEditImageUrls([]);
+  setEditMainImageFile(null);
+  setEditExtraImageFiles([]);
+
+  const { data: gallery, error } = await supabase
+    .from('product_images')
+    .select('url, sort_order')
+    .eq('product_id', p.id)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    onNotify?.(error.message, 'error');
+    setEditingProduct({ ...p, images: p.images || [] });
+    setIsEditModalOpen(true);
+    return;
+  }
+
+  setEditingProduct({ ...p, images: (gallery || []).map(r => r.url) });
+  setIsEditModalOpen(true);
+};
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -392,7 +527,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
                       </div>
                     ) : (
                       <>
-                         <button onClick={() => { setEditingProduct({...p}); setIsEditModalOpen(true); }} className="w-10 h-10 bg-white/90 backdrop-blur text-emerald-600 rounded-xl shadow-lg flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all active:scale-90" title="Muuda"><i className="fa-solid fa-pen"></i></button>
+                         <button onClick={() => openEdit(p)} className="w-10 h-10 bg-white/90 backdrop-blur text-emerald-600 rounded-xl shadow-lg flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all active:scale-90" title="Muuda"><i className="fa-solid fa-pen"></i></button>
                          <button onClick={() => setConfirmingDeleteId(p.id)} className="w-10 h-10 bg-white/90 backdrop-blur text-red-500 rounded-xl shadow-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-90" title="Kustuta"><i className="fa-solid fa-trash"></i></button>
                       </>
                     )}

@@ -34,9 +34,6 @@ const Navbar: React.FC<NavbarProps> = ({
     confirmPassword: '',
     phone: '',
     location: '',
-    cardNumber: '',
-    expiry: '',
-    cvv: '',
     role: UserRole.BUYER,
     termsAccepted: false
   });
@@ -339,15 +336,6 @@ const handleRegister = async (e: React.FormEvent) => {
                     
                     <input required type="password" placeholder="Parool" value={regData.password} onChange={e => setRegData({...regData, password: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
                     <input required type="password" placeholder="Kinnita parool" value={regData.confirmPassword} onChange={e => setRegData({...regData, confirmPassword: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
-                  </div>
-
-                  <div className="space-y-3 pt-2">
-                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Makseandmed (Nõutud)</p>
-                    <input required type="text" placeholder="Kaardi number" value={regData.cardNumber} onChange={e => setRegData({...regData, cardNumber: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <input required type="text" placeholder="KK/AA" value={regData.expiry} onChange={e => setRegData({...regData, expiry: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
-                      <input required type="text" placeholder="CVV" value={regData.cvv} onChange={e => setRegData({...regData, cvv: e.target.value})} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
-                    </div>
                   </div>
                   
                   {regData.role === UserRole.GARDENER && (

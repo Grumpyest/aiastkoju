@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../supabaseClient';
 
@@ -21,11 +21,60 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
     avatar: user.avatar || '',
   });
 
-  const [bankData, setBankData] = useState({
-    cardNumber: user.bankDetails?.cardNumber || '',
-    expiry: user.bankDetails?.expiry || '',
-    cvv: user.bankDetails?.cvv || '',
+const avatarInputRef = useRef<HTMLInputElement>(null);
+const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+
+const safeName = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+const uploadAvatarToStorage = async (file: File, path: string) => {
+  const { error } = await supabase.storage.from('product-images').upload(path, file, {
+    cacheControl: '3600',
+    upsert: true,
+    contentType: file.type,
   });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+  return data.publicUrl;
+};
+
+const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  const file = files[0];
+
+  // preview kohe
+  const preview = URL.createObjectURL(file);
+  setFormData(prev => ({ ...prev, avatar: preview }));
+
+  try {
+    setIsAvatarUploading(true);
+
+    const path = `${user.id}/avatar/avatar-${Date.now()}-${safeName(file.name)}`;
+    const url = await uploadAvatarToStorage(file, path);
+
+    // salvesta DB-sse
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: url })
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    // uuenda UI user state
+    setUser(prev => (prev ? { ...prev, avatar: url } : prev));
+    setFormData(prev => ({ ...prev, avatar: url }));
+
+    onNotify?.('Profiilipilt uuendatud!', 'success');
+  } catch (err: any) {
+    onNotify?.(err?.message || 'Profiilipildi uuendamine ebaõnnestus', 'error');
+  } finally {
+    setIsAvatarUploading(false);
+    e.target.value = ''; // lubab sama faili uuesti valida
+  }
+};
+
 
   const handleSave = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -37,20 +86,17 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
         full_name: formData.name,
         phone: formData.phone || null,
         location: formData.location || null,
-        avatar_url: formData.avatar || null,
       })
       .eq('id', user.id);
 
     if (error) throw error;
 
-    // uuenda lokaalne state
     setUser({
       ...user,
       name: formData.name,
       phone: formData.phone || undefined,
       location: formData.location || undefined,
       avatar: formData.avatar || undefined,
-      bankDetails: bankData, // prototüübis ok, aga ära pane DB-sse
     });
 
     onNotify?.('Profiil edukalt uuendatud!', 'success');
@@ -148,10 +194,48 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="space-y-6">
           <div className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm text-center">
-             <div className="relative w-32 h-32 mx-auto mb-6">
-                <img src={formData.avatar || `https://i.pravatar.cc/150?u=${user.id}`} className="w-full h-full object-cover rounded-full ring-4 ring-stone-50" />
-             </div>
-             <h2 className="text-xl font-bold text-stone-900">{user.name}</h2>
+             <div className="relative w-32 h-32 mx-auto mb-6 group">
+  <button
+    type="button"
+    onClick={() => avatarInputRef.current?.click()}
+    className="relative w-32 h-32 rounded-full overflow-hidden ring-4 ring-stone-50 block"
+    title="Muuda profiilipilti"
+    disabled={isAvatarUploading}
+  >
+    <img
+      src={formData.avatar || `https://i.pravatar.cc/150?u=${user.id}`}
+      className={`w-full h-full object-cover transition duration-200 ${
+        isAvatarUploading ? 'opacity-70' : 'group-hover:blur-[2px]'
+      }`}
+    />
+
+    {/* Hover overlay */}
+    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+      <div className="bg-black/55 text-white px-3 py-2 rounded-xl text-[10px] font-black flex items-center gap-2">
+        <i className="fa-solid fa-pen"></i>
+        MUUDA
+      </div>
+    </div>
+
+    {/* Upload overlay */}
+    {isAvatarUploading && (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="bg-white/90 text-stone-700 px-3 py-2 rounded-xl text-[10px] font-black">
+          Laen üles...
+        </div>
+      </div>
+    )}
+  </button>
+
+  <input
+    ref={avatarInputRef}
+    type="file"
+    className="hidden"
+    accept="image/*"
+    onChange={handleAvatarPick}
+  />
+</div>
+             <h2 className="text-xl font-bold text-stone-900">{formData.name}</h2>
              <p className="text-stone-400 text-xs font-bold uppercase tracking-widest mt-1">
                {user.role === UserRole.GARDENER ? 'Aednik' : user.role === UserRole.ADMIN ? 'Admin' : 'Ostja'}
              </p>
@@ -202,49 +286,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
                     <label className="text-[10px] font-bold text-stone-400 uppercase">Asukoht (Maakond)</label>
                     <input type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Aednikule kohustuslik" />
                  </div>
-              </div>
-
-              <div className="pt-6 border-t border-stone-100">
-                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                  <i className="fa-solid fa-credit-card text-stone-400"></i> Makseandmed
-                </h3>
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-stone-400 uppercase">Kaardi number</label>
-                    <input 
-                      required
-                      type="text" 
-                      placeholder="0000 0000 0000 0000"
-                      value={bankData.cardNumber} 
-                      onChange={e => setBankData({...bankData, cardNumber: e.target.value})} 
-                      className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" 
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-stone-400 uppercase">Kehtivus (KK/AA)</label>
-                      <input 
-                        required
-                        type="text" 
-                        placeholder="MM/YY"
-                        value={bankData.expiry} 
-                        onChange={e => setBankData({...bankData, expiry: e.target.value})} 
-                        className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-stone-400 uppercase">CVV</label>
-                      <input 
-                        required
-                        type="text" 
-                        placeholder="***"
-                        value={bankData.cvv} 
-                        onChange={e => setBankData({...bankData, cvv: e.target.value})} 
-                        className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" 
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-emerald-700 transition-all">Salvesta muudatused</button>
