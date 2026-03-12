@@ -113,28 +113,53 @@ useEffect(() => {
     }
 
     const mapped: Product[] = (data || []).map((p: any) => ({
-  id: String(p.id),
-  sellerId: p.seller_id,
-  sellerName: 'Müüja',
-  sellerLocation: '',
-  title: p.title || '',
-  description: p.description || '',
-  category: p.category || 'Muu',
-  price: Number((p.price_cents ?? 0) / 100),
-  unit: p.unit || 'tk',
-  stockQty: Number(p.stock_qty ?? 0),
-  minOrderQty: Number(p.min_order_qty ?? 1),
-  image: p.image_url || '/placeholder.png',
-  images: [],
-  isActive: p.is_active === true,
-  rating: 0,
-  reviewsCount: 0,
-}));
+      id: String(p.id),
+      sellerId: p.seller_id,
+      sellerName: p.profiles?.full_name || 'Müüja',
+      sellerLocation: p.profiles?.location || '',
+      title: p.title || '',
+      description: p.description || '',
+      category: p.category || 'Muu',
+      price: Number((p.price_cents ?? 0) / 100),
+      unit: p.unit || 'tk',
+      stockQty: Number(p.stock_qty ?? 0),
+      minOrderQty: Number(p.min_order_qty ?? 1),
+      image: p.image_url || '/placeholder.png',
+      images: [],
+      isActive: p.is_active === true,
+      rating: 0,
+      reviewsCount: 0,
+    }));
 
     setProducts(mapped);
   };
 
   loadProducts();
+}, []);
+
+useEffect(() => {
+  const loadReviews = async () => {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('id, product_id, user_id, rating, comment, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      showToast(error.message, 'error');
+      return;
+    }
+
+    setReviews((data || []).map((r: any) => ({
+      id: String(r.id),
+      productId: String(r.product_id),
+      userId: String(r.user_id),
+      rating: Number(r.rating ?? 0),
+      comment: String(r.comment ?? ''),
+      createdAt: String(r.created_at ?? ''),
+    })));
+  };
+
+  loadReviews();
 }, []);
 
   useEffect(() => { localStorage.setItem('lang', language); }, [language]);
