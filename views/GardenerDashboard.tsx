@@ -16,7 +16,7 @@ interface GardenerDashboardProps {
   onNotify?: (message: string, type: 'success' | 'error') => void;
 }
 
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?auto=format&fit=crop&q=80&w=600';
+const DEFAULT_IMAGE = '/placeholder.png';
 
 const GardenerDashboard: React.FC<GardenerDashboardProps> = ({ 
   user, products, orders, reviews = [], setProducts, setOrders, setReviews, onNotify 
@@ -79,10 +79,24 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     .filter(d => d.revenue > 0);
 }, [myProducts, myOrders]);
 
-  const handleStatusUpdate = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    if (onNotify) onNotify(`Tellimuse staatus uuendatud: ${newStatus}`, 'success');
-  };
+ const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+
+    if (error) throw error;
+
+    setOrders(prev =>
+      prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
+    );
+
+    onNotify?.(`Tellimuse staatus uuendatud: ${newStatus}`, 'success');
+  } catch (err: any) {
+    onNotify?.(err?.message || 'Tellimuse staatuse uuendamine ebaõnnestus', 'error');
+  }
+};
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, mode: 'add' | 'edit', isExtra = false) => {
   const files = e.target.files;
@@ -186,6 +200,54 @@ const removeImage = (index: number, mode: 'add' | 'edit') => {
   }
 };
 
+const closeAddModal = () => {
+  if (newProduct.image && typeof newProduct.image === 'string' && newProduct.image.startsWith('blob:')) {
+    URL.revokeObjectURL(newProduct.image);
+  }
+
+  (newProduct.images || []).forEach((img) => {
+    if (typeof img === 'string' && img.startsWith('blob:')) {
+      URL.revokeObjectURL(img);
+    }
+  });
+
+  setMainImageFile(null);
+  setExtraImageFiles([]);
+  setNewProduct({
+    title: '',
+    description: '',
+    category: CATEGORIES[0],
+    unit: UNITS[0],
+    price: 0,
+    stockQty: 0,
+    minOrderQty: 1,
+    image: DEFAULT_IMAGE,
+    images: [],
+    status: ProductStatus.ACTIVE
+  });
+  setIsAddModalOpen(false);
+};
+
+const closeEditModal = () => {
+  if (editingProduct?.image && editingProduct.image.startsWith('blob:')) {
+    URL.revokeObjectURL(editingProduct.image);
+  }
+
+  (editingProduct?.images || []).forEach((img) => {
+    if (img.startsWith('blob:')) {
+      URL.revokeObjectURL(img);
+    }
+  });
+
+  setEditMainImageFile(null);
+  setEditExtraImageFiles([]);
+  setRemovedEditImageUrls([]);
+  setEditingProduct(null);
+  setIsEditModalOpen(false);
+};
+
+
+
 const handleSaveNewProduct = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!newProduct.title) return;
@@ -263,6 +325,17 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
     };
 
     setProducts(prev => [productToAdd, ...prev]);
+
+    if (newProduct.image && typeof newProduct.image === 'string' && newProduct.image.startsWith('blob:')) {
+  URL.revokeObjectURL(newProduct.image);
+}
+
+(newProduct.images || []).forEach((img) => {
+  if (typeof img === 'string' && img.startsWith('blob:')) {
+    URL.revokeObjectURL(img);
+  }
+});
+
 
     // reset
     setIsAddModalOpen(false);
@@ -377,11 +450,22 @@ const handleSaveEdit = async (e: React.FormEvent) => {
 
     setProducts(prev => prev.map(p => (p.id === updatedProduct.id ? updatedProduct : p)));
 
+    if (editingProduct.image && editingProduct.image.startsWith('blob:')) {
+  URL.revokeObjectURL(editingProduct.image);
+}
+
+(editingProduct.images || []).forEach((img) => {
+  if (img.startsWith('blob:')) {
+    URL.revokeObjectURL(img);
+  }
+});
+
     // reset edit temp state
     setIsEditModalOpen(false);
     setEditMainImageFile(null);
     setEditExtraImageFiles([]);
     setRemovedEditImageUrls([]);
+    setEditingProduct(null);
 
     onNotify?.('Muudatused salvestatud (pildid ka)!', 'success');
   } catch (err: any) {
@@ -706,7 +790,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
           <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-fade-in relative my-auto">
             <div className="p-8 border-b border-stone-50 flex justify-between items-center">
               <h2 className="text-2xl font-black text-stone-900">Lisa uus toode</h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
+              <button onClick={closeAddModal} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
             </div>
             <form onSubmit={handleSaveNewProduct} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-stone-100">
               <div className="space-y-6">
@@ -776,7 +860,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
           <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-fade-in relative my-auto">
             <div className="p-8 border-b border-stone-50 flex justify-between items-center">
               <h2 className="text-2xl font-black text-stone-900">Muuda toodet</h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
+              <button onClick={closeEditModal} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
             </div>
             <form onSubmit={handleSaveEdit} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-stone-100">
               <div className="space-y-6">
