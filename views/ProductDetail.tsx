@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product, User, Review, UserRole, ReviewReply } from '../types';
+import { supabase } from '../supabaseClient';
 
 interface ProductDetailProps {
   product: Product;
@@ -35,52 +36,104 @@ useEffect(() => {
   const [replyingToReviewId, setReplyingToReviewId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
-  const productReviews = useMemo(() => reviews.filter(r => r.targetId === product.id), [reviews, product.id]);
-  
+  const productReviews = useMemo(
+  () => reviews.filter(r => String(r.productId) === String(product.id)),
+  [reviews, product.id]
+);
+
   const averageRating = useMemo(() => {
-    if (productReviews.length === 0) return 0;
-    const sum = productReviews.reduce((acc, r) => acc + r.stars, 0);
-    return (sum / productReviews.length).toFixed(1);
-  }, [productReviews]);
+  if (productReviews.length === 0) return '0.0';
+  const sum = productReviews.reduce((acc, r) => acc + Number(r.rating || 0), 0);
+  return (sum / productReviews.length).toFixed(1);
+}, [productReviews]);
 
-  const handleAddReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      if (onNotify) onNotify('Palun logi sisse!', 'error');
-      return;
-    }
-    const newReview: Review = {
-      id: `r-${Math.random().toString(36).substring(2, 11)}`,
-      orderId: 'manual',
-      reviewerId: user.id,
-      reviewerName: user.name,
-      targetType: 'product',
-      targetId: product.id,
-      stars: newReviewStars,
-      comment: newReviewComment,
-      createdAt: new Date().toISOString(),
-      replies: []
-    };
-    setReviews(prev => [newReview, ...prev]);
-    setNewReviewComment('');
-    if (onNotify) onNotify('Arvustus postitatud!', 'success');
+const handleAddReview = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!user) {
+    onNotify?.('Palun logi sisse!', 'error');
+    return;
+  }
+
+  if (!newReviewComment.trim()) {
+    onNotify?.('Kirjuta arvustus.', 'error');
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert({
+      product_id: product.id,
+      user_id: user.id,
+      rating: newReviewStars,
+      comment: newReviewComment.trim(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    onNotify?.(error.message, 'error');
+    return;
+  }
+
+  const savedReview = {
+    id: String(data.id),
+    productId: String(data.product_id),
+    userId: String(data.user_id),
+    reviewerName: user.name,
+    rating: Number(data.rating ?? 0),
+    comment: String(data.comment ?? ''),
+    createdAt: String(data.created_at ?? ''),
+    replies: [],
   };
 
-  const handleReply = (reviewId: string) => {
-    if (!user || !replyText.trim()) return;
-    const newReply: ReviewReply = {
-      id: `rep-${Math.random().toString(36).substring(2, 11)}`,
-      userId: user.id,
-      userName: user.name,
-      text: replyText,
+  setReviews(prev => [savedReview, ...prev]);
+  setNewReviewComment('');
+  setNewReviewStars(5);
+  onNotify?.('Arvustus postitatud!', 'success');
+};
+
+ const handleReply = async (reviewId: string) => {
+  if (!user || !replyText.trim()) return;
+
+  const { data, error } = await supabase
+    .from('review_replies')
+    .insert({
+      review_id: reviewId,
+      user_id: user.id,
+      user_name: user.name,
+      text: replyText.trim(),
       role: user.role,
-      createdAt: new Date().toISOString()
-    };
-    setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, replies: [...(r.replies || []), newReply] } : r));
-    setReplyingToReviewId(null);
-    setReplyText('');
-    if (onNotify) onNotify('Vastus lisatud.', 'success');
+    })
+    .select()
+    .single();
+
+  if (error) {
+    onNotify?.(error.message, 'error');
+    return;
+  }
+
+  const newReply: ReviewReply = {
+    id: String(data.id),
+    userId: String(data.user_id),
+    userName: String(data.user_name),
+    text: String(data.text),
+    role: data.role,
+    createdAt: String(data.created_at ?? ''),
   };
+
+  setReviews(prev =>
+    prev.map(r =>
+      r.id === reviewId
+        ? { ...r, replies: [...(r.replies || []), newReply] }
+        : r
+    )
+  );
+
+  setReplyingToReviewId(null);
+  setReplyText('');
+  onNotify?.('Vastus lisatud.', 'success');
+};
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 md:py-16">
@@ -156,13 +209,18 @@ useEffect(() => {
           {productReviews.length === 0 ? <p className="text-stone-400 text-center py-10">Sellel tootel pole veel arvustusi.</p> : productReviews.map(review => (
             <div key={review.id} className="space-y-6">
               <div className="flex gap-4">
-                <img src={`https://i.pravatar.cc/150?u=${review.reviewerId}`} className="w-14 h-14 rounded-2xl border-2 border-white shadow-md shrink-0" />
+                <img src={`https://i.pravatar.cc/150?u=${review.userId}`} className="w-14 h-14 rounded-2xl border-2 border-white shadow-md shrink-0" />
                 <div className="flex-grow">
                   <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm relative">
                     <div className="flex justify-between items-start mb-2">
-                      <p className="font-black text-stone-900">{review.reviewerName}</p>
+                      <p className="font-black text-stone-900">{review.reviewerName ?? 'Kasutaja'}</p>
                       <div className="flex text-yellow-400 text-[10px] gap-0.5">
-                        {[1,2,3,4,5].map(s => <i key={s} className={`fa-solid fa-star ${s <= review.stars ? 'text-yellow-400' : 'text-stone-100'}`}></i>)}
+                        {[1,2,3,4,5].map(s => (
+                        <i
+                          key={s}
+                          className={`fa-solid fa-star ${s <= Number(review.rating || 0) ? 'text-yellow-400' : 'text-stone-100'}`}
+                        ></i>
+                        ))}
                       </div>
                     </div>
                     <p className="text-stone-600 text-lg leading-relaxed font-medium">"{review.comment}"</p>

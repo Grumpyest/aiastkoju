@@ -139,24 +139,46 @@ useEffect(() => {
 
 useEffect(() => {
   const loadReviews = async () => {
-    const { data, error } = await supabase
+    const { data: reviewsData, error: reviewsError } = await supabase
       .from('reviews')
       .select('id, product_id, user_id, rating, comment, created_at')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      showToast(error.message, 'error');
+    if (reviewsError) {
+      showToast(reviewsError.message, 'error');
       return;
     }
 
-    setReviews((data || []).map((r: any) => ({
+    const { data: repliesData, error: repliesError } = await supabase
+      .from('review_replies')
+      .select('id, review_id, user_id, user_name, text, role, created_at')
+      .order('created_at', { ascending: true });
+
+    if (repliesError) {
+      showToast(repliesError.message, 'error');
+      return;
+    }
+
+    const mappedReviews = (reviewsData || []).map((r: any) => ({
       id: String(r.id),
       productId: String(r.product_id),
       userId: String(r.user_id),
       rating: Number(r.rating ?? 0),
       comment: String(r.comment ?? ''),
       createdAt: String(r.created_at ?? ''),
-    })));
+      replies: (repliesData || [])
+        .filter((rep: any) => String(rep.review_id) === String(r.id))
+        .map((rep: any) => ({
+          id: String(rep.id),
+          userId: String(rep.user_id),
+          userName: String(rep.user_name),
+          text: String(rep.text ?? ''),
+          role: rep.role,
+          createdAt: String(rep.created_at ?? ''),
+        })),
+    }));
+
+    setReviews(mappedReviews);
   };
 
   loadReviews();
