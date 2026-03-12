@@ -98,8 +98,13 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
       setNewProduct(prev => ({ ...prev, images: [...(prev.images || []), preview] }));
     } else {
       setMainImageFile(file);
-      const preview = URL.createObjectURL(file);
-      setNewProduct(prev => ({ ...prev, image: preview }));
+        const preview = URL.createObjectURL(file);
+      setNewProduct(prev => {
+        if (prev.image && typeof prev.image === 'string' && prev.image.startsWith('blob:')) {
+          URL.revokeObjectURL(prev.image);
+        }
+    return { ...prev, image: preview };
+});
     }
   }
   
@@ -115,7 +120,13 @@ if (mode === 'edit') {
     );
   } else {
     setEditMainImageFile(file);
-    setEditingProduct(prev => (prev ? ({ ...prev, image: preview }) : prev));
+setEditingProduct(prev => {
+  if (!prev) return prev;
+  if (prev.image && prev.image.startsWith('blob:')) {
+    URL.revokeObjectURL(prev.image);
+  }
+  return { ...prev, image: preview };
+});
   }
 }
 
@@ -138,7 +149,16 @@ const uploadToStorage = async (file: File, path: string) => {
 
 const removeImage = (index: number, mode: 'add' | 'edit') => {
   if (mode === 'add') {
-    setNewProduct(prev => ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }));
+    const url = (newProduct.images || [])[index];
+
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+
+    setNewProduct(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index)
+    }));
     setExtraImageFiles(prev => prev.filter((_, i) => i !== index));
     return;
   }
@@ -151,6 +171,8 @@ const removeImage = (index: number, mode: 'add' | 'edit') => {
     }
 
     if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+
       const blobUrls = (editingProduct.images || []).filter(u => u.startsWith('blob:'));
       const blobIndex = blobUrls.indexOf(url);
       if (blobIndex >= 0) {
@@ -169,7 +191,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
   if (!newProduct.title) return;
 
   try {
-
+    const uploadedExtraUrls: string[] = [];
 
     const { data: created, error: createErr } = await supabase
       .from('products')
@@ -205,17 +227,19 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
     }
 
     // 3) upload extra images + insert gallery rows
-    for (let i = 0; i < extraImageFiles.length; i++) {
-      const f = extraImageFiles[i];
-      const path = `${user.id}/${created.id}/extra-${i}-${Date.now()}-${safeName(f.name)}`;
-      const url = await uploadToStorage(f, path);
+  for (let i = 0; i < extraImageFiles.length; i++) {
+  const f = extraImageFiles[i];
+  const path = `${user.id}/${created.id}/extra-${i}-${Date.now()}-${safeName(f.name)}`;
+  const url = await uploadToStorage(f, path);
 
-      const { error: imgErr } = await supabase
-        .from('product_images')
-        .insert([{ product_id: created.id, url, sort_order: i }]);
+  const { error: imgErr } = await supabase
+    .from('product_images')
+    .insert([{ product_id: created.id, url, sort_order: i }]);
 
-      if (imgErr) throw imgErr;
-    }
+  if (imgErr) throw imgErr;
+
+  uploadedExtraUrls.push(url);
+}
 
     // 4) lisa UI state’i (instant)
     const productToAdd: Product = {
@@ -231,7 +255,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       stockQty: created.stock_qty ?? 0,
       minOrderQty: created.min_order_qty ?? 1,
       image: mainUrl,
-      images: (newProduct.images || []).filter(Boolean), 
+      images: uploadedExtraUrls,
       isActive: created.is_active === true,
       status: ProductStatus.ACTIVE,
       rating: 0,
@@ -365,11 +389,22 @@ const handleSaveEdit = async (e: React.FormEvent) => {
   }
 };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string) => {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: false, status: 'INACTIVE' })
+      .eq('id', productId);
+
+    if (error) throw error;
+
     setProducts(prev => prev.filter(p => p.id !== productId));
     setConfirmingDeleteId(null);
-    if (onNotify) onNotify('Toode on eemaldatud.', 'success');
-  };
+    onNotify?.('Toode on eemaldatud.', 'success');
+  } catch (err: any) {
+    onNotify?.(err?.message || 'Toote eemaldamine ebaõnnestus', 'error');
+  }
+};
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
