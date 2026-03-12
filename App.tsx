@@ -89,24 +89,20 @@ useEffect(() => {
     const { data, error } = await supabase
       .from('products')
       .select(`
-        id,
-        seller_id,
-        title,
-        description,
-        category,
-        price_cents,
-        unit,
-        stock_qty,
-        min_order_qty,
-        image_url,
-        is_active,
-        status,
-        created_at,
-        profiles:seller_id (
-        full_name,
-        location
-        )
-      `)
+  id,
+  seller_id,
+  title,
+  description,
+  category,
+  price_cents,
+  unit,
+  stock_qty,
+  min_order_qty,
+  image_url,
+  is_active,
+  status,
+  created_at
+`)
       .eq('is_active', true)
       .eq('status', 'ACTIVE')
       .order('created_at', { ascending: false });
@@ -117,23 +113,23 @@ useEffect(() => {
     }
 
     const mapped: Product[] = (data || []).map((p: any) => ({
-      id: String(p.id),
-      sellerId: p.seller_id,
-      sellerName: p.profiles?.full_name || 'Müüja',
-      sellerLocation: p.profiles?.location || '',
-      title: p.title || '',
-      description: p.description || '',
-      category: p.category || 'Muu',
-      price: Number((p.price_cents ?? 0) / 100),
-      unit: p.unit || 'tk',
-      stockQty: Number(p.stock_qty ?? 0),
-      minOrderQty: Number(p.min_order_qty ?? 1),
-      image: p.image_url || '/placeholder.png',
-      images: [],
-      isActive: p.is_active === true,
-      rating: 0,
-      reviewsCount: 0,
-    }));
+  id: String(p.id),
+  sellerId: p.seller_id,
+  sellerName: 'Müüja',
+  sellerLocation: '',
+  title: p.title || '',
+  description: p.description || '',
+  category: p.category || 'Muu',
+  price: Number((p.price_cents ?? 0) / 100),
+  unit: p.unit || 'tk',
+  stockQty: Number(p.stock_qty ?? 0),
+  minOrderQty: Number(p.min_order_qty ?? 1),
+  image: p.image_url || '/placeholder.png',
+  images: [],
+  isActive: p.is_active === true,
+  rating: 0,
+  reviewsCount: 0,
+}));
 
     setProducts(mapped);
   };
