@@ -19,10 +19,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, user, reviews, s
   
 const PLACEHOLDER = "/placeholder.png";
 
-  const allImages = useMemo(
-  () => [product.image, ...(product.images || [])].filter(Boolean) as string[],
-  [product.image, product.images]
-);
+const allImages = useMemo(() => {
+  const imgs = [product.image, ...(product.images || [])]
+    .filter(Boolean)
+    .map(img => String(img).trim())
+    .filter(Boolean);
+
+  const unique = [...new Set(imgs)];
+
+  return unique.length ? unique : [PLACEHOLDER];
+}, [product.image, product.images]);
+
 const [mainImage, setMainImage] = useState(allImages[0] ?? PLACEHOLDER);
 
 useEffect(() => {
@@ -141,54 +148,81 @@ const handleAddReview = async (e: React.FormEvent) => {
         <i className="fa-solid fa-arrow-left"></i> Tagasi kataloogi
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-        <div className="space-y-4">
-          <div className="aspect-square sm:aspect-video rounded-[40px] overflow-hidden shadow-2xl bg-stone-100 cursor-zoom-in group relative border-4 border-white" onClick={() => setIsGalleryOpen(true)}>
-            <img src={mainImage} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <i className="fa-solid fa-expand text-white text-3xl"></i>
-            </div>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-            {allImages.map((img, i) => (
-              <div key={i} onClick={() => setMainImage(img)} className={`w-20 h-20 shrink-0 rounded-xl overflow-hidden cursor-pointer transition-all border-2 ${mainImage === img ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-transparent opacity-60'}`}>
-                <img src={img} className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
-        </div>
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+  <div className="space-y-4">
+    <div
+      className="aspect-square sm:aspect-video rounded-[40px] overflow-hidden shadow-2xl bg-stone-100 cursor-zoom-in group relative border-4 border-white"
+      onClick={() => setIsGalleryOpen(true)}
+    >
+      <img
+        src={mainImage}
+        alt={product.title}
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      />
+      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+        <i className="fa-solid fa-expand text-white text-3xl"></i>
+      </div>
+    </div>
 
-        <div className="flex flex-col">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">{product.category}</span>
-            <div className="flex items-center text-yellow-400 text-sm font-bold">
-               <i className="fa-solid fa-star"></i>
-               <span className="ml-1.5 text-stone-900">{averageRating}</span>
-               <span className="ml-1 text-stone-400 font-medium">({productReviews.length})</span>
-            </div>
-          </div>
-          
-          <h1 className="text-4xl font-black text-stone-900 mb-4 tracking-tight leading-tight">{product.title}</h1>
-          <p className="text-3xl text-emerald-700 font-black mb-8">{Number(product.price ?? 0).toFixed(2)}€ <span className="text-stone-400 text-sm font-medium">/ {product.unit ?? ''}</span></p>
-          <p className="text-stone-600 leading-relaxed text-lg mb-10">{product.description ?? ''}</p>
+    {allImages.length > 1 && (
+      <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+        {allImages.map((img, i) => (
+          <button
+            key={`${img}-${i}`}
+            type="button"
+            onClick={() => setMainImage(img)}
+            className={`w-20 h-20 shrink-0 rounded-xl overflow-hidden cursor-pointer transition-all border-2 ${
+              mainImage === img
+                ? 'border-emerald-500 ring-2 ring-emerald-500/20 opacity-100'
+                : 'border-transparent opacity-60 hover:opacity-100'
+            }`}
+          >
+            <img
+              src={img}
+              alt={`${product.title} ${i + 1}`}
+              className="w-full h-full object-cover"
+            />
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
 
-          <div className="bg-white rounded-[40px] p-8 border border-stone-100 shadow-xl shadow-stone-200/50">
-            <div className="flex items-center justify-between mb-8">
-              <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
-              <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
-                <button onClick={() => setQuantity(q => Math.max(Number(product.minOrderQty ?? 1), (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
-                <span className="text-xl font-black w-8 text-center">{quantity}</span>
-                <button onClick={() => setQuantity(q => Math.min(Number(product.stockQty ?? 999999), (q ?? 0) + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <button onClick={() => { onAddToCart(product.id, quantity); }} className="flex-1 border-2 border-emerald-600 text-emerald-600 py-4 rounded-2xl font-black hover:bg-emerald-50 transition-all active:scale-95 flex items-center justify-center gap-3"><i className="fa-solid fa-cart-shopping"></i> Lisa korvi</button>
-              <button onClick={() => onBuyNow(product.id, quantity)} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95">Osta kohe</button>
-            </div>
-          </div>
+  <div className="flex flex-col">
+    <div className="flex items-center gap-3 mb-4">
+      <span className="bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">{product.category}</span>
+      <div className="flex items-center text-yellow-400 text-sm font-bold">
+        <i className="fa-solid fa-star"></i>
+        <span className="ml-1.5 text-stone-900">{averageRating}</span>
+        <span className="ml-1 text-stone-400 font-medium">({productReviews.length})</span>
+      </div>
+    </div>
+
+    <h1 className="text-4xl font-black text-stone-900 mb-4 tracking-tight leading-tight">{product.title}</h1>
+    <p className="text-3xl text-emerald-700 font-black mb-8">
+      {Number(product.price ?? 0).toFixed(2)}€
+      <span className="text-stone-400 text-sm font-medium">/ {product.unit ?? ''}</span>
+    </p>
+    <p className="text-stone-600 leading-relaxed text-lg mb-10">{product.description ?? ''}</p>
+
+    <div className="bg-white rounded-[40px] p-8 border border-stone-100 shadow-xl shadow-stone-200/50">
+      <div className="flex items-center justify-between mb-8">
+        <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
+        <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
+          <button onClick={() => setQuantity(q => Math.max(Number(product.minOrderQty ?? 1), (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
+          <span className="text-xl font-black w-8 text-center">{quantity}</span>
+          <button onClick={() => setQuantity(q => Math.min(Number(product.stockQty ?? 999999), (q ?? 0) + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
         </div>
       </div>
+
+      <div className="flex gap-4">
+        <button onClick={() => { onAddToCart(product.id, quantity); }} className="flex-1 border-2 border-emerald-600 text-emerald-600 py-4 rounded-2xl font-black hover:bg-emerald-50 transition-all active:scale-95 flex items-center justify-center gap-3"><i className="fa-solid fa-cart-shopping"></i> Lisa korvi</button>
+        <button onClick={() => onBuyNow(product.id, quantity)} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95">Osta kohe</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
       <div className="max-w-4xl mx-auto border-t border-stone-200 pt-16 pb-20">
         <h2 className="text-3xl font-black text-stone-900 mb-8">Arvustused ja vastused</h2>

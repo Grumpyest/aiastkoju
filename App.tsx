@@ -89,19 +89,23 @@ useEffect(() => {
     const { data, error } = await supabase
       .from('products')
       .select(`
-  id,
-  seller_id,
-  title,
-  description,
-  category,
-  price_cents,
-  unit,
-  stock_qty,
-  min_order_qty,
-  image_url,
-  is_active,
-  status,
-  created_at
+      id,
+      seller_id,
+      title,
+      description,
+      category,
+      price_cents,
+      unit,
+      stock_qty,
+      min_order_qty,
+      image_url,
+      is_active,
+      status,
+      created_at,
+      product_images (
+        url,
+        sort_order
+      )
 `)
       .eq('is_active', true)
       .eq('status', 'ACTIVE')
@@ -125,7 +129,11 @@ useEffect(() => {
       stockQty: Number(p.stock_qty ?? 0),
       minOrderQty: Number(p.min_order_qty ?? 1),
       image: p.image_url || '/placeholder.png',
-      images: [],
+      images: p.product_images 
+      ? p.product_images
+          .sort((a: any, b: any) => a.sort_order - b.sort_order)
+          .map((img: any) => img.url)
+      : [],
       isActive: p.is_active === true,
       rating: 0,
       reviewsCount: 0,
