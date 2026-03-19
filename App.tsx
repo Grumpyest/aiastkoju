@@ -187,7 +187,7 @@ useEffect(() => {
             productId: String(i.product_id),
             title: product?.title || 'Toode',
             qty: Number(i.quantity ?? 0),
-            price: Number(i.price_at_purchase ?? 0),
+            price: Number(i.unit_price ?? 0),
           };
         }),
     }));

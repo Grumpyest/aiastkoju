@@ -80,7 +80,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ user, cart, products, onCom
           product_id: si.productId,
           seller_id: si.sellerId,
           quantity: si.quantity,
-          price_at_purchase: si.price
+          unit_price: si.price
         }));
 
         const { error: iErr } = await supabase
