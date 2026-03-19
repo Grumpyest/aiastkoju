@@ -146,6 +146,62 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
+  const loadOrders = async () => {
+    const { data: orderRows, error: orderErr } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (orderErr) {
+      showToast(orderErr.message, 'error');
+      return;
+    }
+
+    const { data: itemRows, error: itemErr } = await supabase
+      .from('order_items')
+      .select('*');
+
+    if (itemErr) {
+      showToast(itemErr.message, 'error');
+      return;
+    }
+
+    const mapped: Order[] = (orderRows || []).map((o: any) => ({
+      id: String(o.id),
+      buyerId: String(o.buyer_id),
+      buyerName: o.buyer_name || '',
+      buyerPhone: o.buyer_phone || '',
+      buyerEmail: o.buyer_email || '',
+      sellerId: String(o.seller_id),
+      sellerLocation: '',
+      status: o.status as OrderStatus,
+      total: Number(o.total ?? 0),
+      createdAt: String(o.created_at ?? ''),
+      deliveryAddress: o.delivery_address || '',
+      items: (itemRows || [])
+        .filter((i: any) => String(i.order_id) === String(o.id))
+        .map((i: any) => {
+          const product = products.find(p => String(p.id) === String(i.product_id));
+
+          return {
+            productId: String(i.product_id),
+            title: product?.title || 'Toode',
+            qty: Number(i.quantity ?? 0),
+            price: Number(i.price_at_purchase ?? 0),
+          };
+        }),
+    }));
+
+    setOrders(mapped);
+  };
+
+  if (products.length > 0) {
+    loadOrders();
+  }
+}, [products]);
+
+
+useEffect(() => {
   const loadReviews = async () => {
     const { data: reviewsData, error: reviewsError } = await supabase
       .from('reviews')
@@ -205,6 +261,28 @@ useEffect(() => {
       return [...prev, { productId, quantity }];
     });
     showToast('Toode lisatud ostukorvi!', 'success');
+  };
+
+    const handleIncreaseCartQty = (productId: string) => {
+    setCart(prev =>
+      prev.map(item =>
+        item.productId === productId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  };
+
+  const handleDecreaseCartQty = (productId: string) => {
+    setCart(prev =>
+      prev
+        .map(item =>
+          item.productId === productId
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter(item => item.quantity > 0)
+    );
   };
 
   const handleRemoveFromCart = (productId: string) => {
@@ -296,7 +374,7 @@ useEffect(() => {
           />
         ) : <div>Toodet ei leitud</div>;
       case 'orders':
-        return user ? <OrdersView user={user} orders={orders} products={products} /> : <HomeView onSearch={onSearch} onSelectCategory={onSelectCategory} onViewProduct={onViewProduct} t={t} products={products} />;
+        return user ? <OrdersView user={user} orders={orders} products={products} cart={cart} onIncreaseQty={handleIncreaseCartQty} onDecreaseQty={handleDecreaseCartQty} onRemoveFromCart={handleRemoveFromCart} onCheckout={handleGoToCheckout}  /> : <HomeView onSearch={onSearch} onSelectCategory={onSelectCategory} onViewProduct={onViewProduct} t={t} products={products} />;
       case 'checkout':
         return user ? (
           <CheckoutView 

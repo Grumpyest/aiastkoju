@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { User, Product, CartItem, Order, OrderStatus } from '../types';
 import { supabase } from '../supabaseClient';
@@ -39,73 +38,87 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ user, cart, products, onCom
 
   const total = cartItemsWithDetails.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  try {
-    const sellers = Object.keys(itemsBySeller);
-    const createdOrders: Order[] = [];
-
-    for (const sellerId of sellers) {
-      const sellerItems = itemsBySeller[sellerId];
-
-      const totalAmount = sellerItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-
-      // 1) insert order header
-      const { data: orderRow, error: oErr } = await supabase
-        .from('orders')
-        .insert({
-          buyer_id: user.id,
-          total: totalAmount,
-          status: 'paid'
-        })
-        .select('*')
-        .single();
-
-      if (oErr) throw oErr;
-
-      // 2) insert order items
-      const itemsPayload = sellerItems.map(si => ({
-        order_id: orderRow.id,
-        product_id: si.productId,
-        seller_id: si.sellerId,
-        quantity: si.quantity,
-        price_at_purchase: si.price
-      }));
-
-      const { error: iErr } = await supabase
-        .from('order_items')
-        .insert(itemsPayload);
-
-      if (iErr) throw iErr;
-
-      // 3) map tagasi app Order tüübiks (et su UI töötab)
-      createdOrders.push({
-        id: String(orderRow.id),
-        buyerId: user.id,
-        buyerName: formData.name,
-        buyerPhone: formData.phone,
-        buyerEmail: formData.email,
-        sellerId: sellerId,
-        sellerLocation: sellerItems[0].sellerLocation,
-        status: OrderStatus.NEW,
-        total: totalAmount,
-        items: sellerItems.map(si => ({
-          productId: si.productId,
-          title: si.title,
-          qty: si.quantity,
-          price: si.price
-        })),
-        createdAt: orderRow.created_at,
-        deliveryAddress: formData.address
-      });
+    if (cartItemsWithDetails.length === 0) {
+      alert('Sinu ostukorv on tühi');
+      return;
     }
 
-    onComplete(createdOrders);
-  } catch (err: any) {
-    alert(err?.message || 'Tellimuse salvestamine ebaõnnestus');
-  }
-};
+    try {
+      const sellers = Object.keys(itemsBySeller);
+      const createdOrders: Order[] = [];
+
+      for (const sellerId of sellers) {
+        const sellerItems = itemsBySeller[sellerId];
+
+        const totalAmount = sellerItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+
+        // 1) insert order header
+        const { data: orderRow, error: oErr } = await supabase
+          .from('orders')
+          .insert({
+            buyer_id: user.id,
+            seller_id: sellerId,
+            total: totalAmount,
+            status: OrderStatus.NEW,
+            buyer_name: formData.name,
+            buyer_email: formData.email,
+            buyer_phone: formData.phone,
+            delivery_address: formData.address,
+            notes: formData.notes
+          })
+          .select('*')
+          .single();
+
+        if (oErr) throw oErr;
+
+        // 2) insert order items
+        const itemsPayload = sellerItems.map(si => ({
+          order_id: orderRow.id,
+          product_id: si.productId,
+          seller_id: si.sellerId,
+          quantity: si.quantity,
+          price_at_purchase: si.price
+        }));
+
+        const { error: iErr } = await supabase
+          .from('order_items')
+          .insert(itemsPayload);
+
+        if (iErr) {
+          await supabase.from('orders').delete().eq('id', orderRow.id); 
+          throw iErr;
+        }
+
+        // 3) map tagasi app Order tüübiks (et su UI töötab)
+        createdOrders.push({
+          id: String(orderRow.id),
+          buyerId: user.id,
+          buyerName: formData.name,
+          buyerPhone: formData.phone,
+          buyerEmail: formData.email,
+          sellerId: sellerId,
+          sellerLocation: sellerItems[0].sellerLocation,
+          status: OrderStatus.NEW,
+          total: totalAmount,
+          items: sellerItems.map(si => ({
+            productId: si.productId,
+            title: si.title,
+            qty: si.quantity,
+            price: si.price
+          })),
+          createdAt: orderRow.created_at,
+          deliveryAddress: formData.address
+        });
+      }
+
+      onComplete(createdOrders);
+    } catch (err: any) {
+      alert(err?.message || 'Tellimuse salvestamine ebaõnnestus');
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
@@ -231,7 +244,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                     <div className="space-y-2">
                       {sellerItems.map(item => (
-                        <div key={item.id} className="flex justify-between text-xs">
+                        <div key={item.productId} className="flex justify-between text-xs">
                           <span className="text-stone-600">{item.title} (x{item.quantity})</span>
                           <span className="font-bold text-stone-900">{(item.price * item.quantity).toFixed(2)}€</span>
                         </div>

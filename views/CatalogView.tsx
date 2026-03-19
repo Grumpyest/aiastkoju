@@ -18,7 +18,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [selectedCat, setSelectedCat] = useState<string | null>(initialCategory);
-  const [priceRange, setPriceRange] = useState<number>(50);
+  const [priceRange, setPriceRange] = useState<number>(9999);
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'rating'>('newest');
 
   // Sync with props if they change
@@ -86,7 +86,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             </div>
             <input 
               type="range" 
-              min="0" max="100" 
+              min="0" max="9999" 
               value={priceRange}
               onChange={(e) => setPriceRange(parseInt(e.target.value))}
               className="w-full accent-emerald-600 cursor-pointer"
