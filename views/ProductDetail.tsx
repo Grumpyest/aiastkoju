@@ -247,7 +247,7 @@ const handleAddReview = async (e: React.FormEvent) => {
                 <div className="flex-grow">
                   <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm relative">
                     <div className="flex justify-between items-start mb-2">
-                      <p className="font-black text-stone-900">{review.reviewerName ?? 'Kasutaja'}</p>
+                      <p className="font-black text-stone-900">{review.reviewerName || 'Kasutaja'}</p>
                       <div className="flex text-yellow-400 text-[10px] gap-0.5">
                         {[1,2,3,4,5].map(s => (
                         <i

@@ -1,15 +1,100 @@
-
-import React from 'react';
-import { User, Order, OrderStatus, Product } from '../types';
+import React, { useState } from 'react';
+import { User, Order, OrderStatus, Product, Review, CartItem } from '../types';
+import { supabase } from '../supabaseClient';
 
 interface OrdersViewProps {
   user: User;
   orders: Order[];
   products: Product[];
+  reviews: Review[];
+  setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
+  cart: CartItem[];
+  onIncreaseQty: (productId: string) => void;
+  onDecreaseQty: (productId: string) => void;
+  onRemoveFromCart: (productId: string) => void;
+  onCheckout: () => void;
+  onNotify?: (message: string, type: 'success' | 'error') => void;
 }
 
-const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products }) => {
-  const myOrders = orders.filter(o => o.buyerId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews, setReviews, onNotify }) => {
+  const myOrders = orders
+    .filter(o => o.buyerId === user.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const [openReviewOrderId, setOpenReviewOrderId] = useState<string | null>(null);
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string; saving?: boolean }>>({});
+
+  const updateDraft = (orderId: string, productId: string, patch: Partial<{ rating: number; comment: string; saving?: boolean }>) => {
+    const key = `${orderId}:${productId}`;
+    setReviewDrafts(prev => ({
+      ...prev,
+      [key]: {
+        rating: prev[key]?.rating ?? 5,
+        comment: prev[key]?.comment ?? '',
+        saving: prev[key]?.saving ?? false,
+        ...patch,
+      },
+    }));
+  };
+
+  const submitReview = async (orderId: string, productId: string) => {
+    const key = `${orderId}:${productId}`;
+    const draft = reviewDrafts[key] ?? { rating: 5, comment: '' };
+
+    if (!draft.comment.trim()) {
+      onNotify?.('Palun kirjuta arvustus.', 'error');
+      return;
+    }
+
+    updateDraft(orderId, productId, { saving: true });
+
+    const { data, error } = await supabase
+  .from('reviews')
+  .insert({
+    product_id: productId,
+    user_id: user.id,
+    rating: draft.rating,
+    comment: draft.comment.trim(),
+  })
+  .select(`
+    id,
+    product_id,
+    user_id,
+    rating,
+    comment,
+    created_at,
+    profiles:user_id (
+      full_name
+    )
+  `)
+  .single();
+
+    if (error) {
+      console.error(error);
+      onNotify?.('Arvustuse salvestamine ebaõnnestus.', 'error');
+      updateDraft(orderId, productId, { saving: false });
+      return;
+    }
+
+setReviews(prev => [
+  {
+    id: String(data.id),
+    productId: String(data.product_id),
+    userId: String(data.user_id),
+    reviewerName: user.name || 'Kasutaja',
+    rating: Number(data.rating ?? 0),
+    comment: String(data.comment ?? ''),
+    createdAt: String(data.created_at ?? ''),
+    replies: [],
+  },
+  ...prev,
+]);
+
+    updateDraft(orderId, productId, { rating: 5, comment: '', saving: false });
+    onNotify?.('Arvustus lisatud!', 'success');
+  };
+
+  
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -62,20 +147,101 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products }) => {
                   })}
                 </div>
                 
-                <div className="mt-8 pt-6 border-t border-stone-100 flex justify-between items-end">
-                   <div>
-                     <p className="text-xs font-bold text-stone-400 uppercase mb-2">Müüja kontakt</p>
-                     <div className="flex items-center gap-3">
-                        <img src={`https://i.pravatar.cc/150?u=${order.sellerId}`} className="w-8 h-8 rounded-full" />
-                        <span className="font-bold text-stone-700">Mati Mets</span>
-                     </div>
-                   </div>
-                   {order.status === OrderStatus.COMPLETED && (
-                     <button className="bg-white border border-stone-200 text-stone-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-stone-50 transition-colors">
-                       Lisa arvustus
-                     </button>
-                   )}
-                </div>
+                <div className="mt-8 pt-6 border-t border-stone-100">
+  <div className="flex justify-between items-start gap-4">
+    <div className={`transition-all duration-300 ${openReviewOrderId === order.id ? '-translate-y-1' : 'translate-y-0'}`}>
+      <p className="text-xs font-bold text-stone-400 uppercase mb-2">Müüja kontakt</p>
+      <div className="flex items-center gap-3">
+        <img src={`https://i.pravatar.cc/150?u=${order.sellerId}`} className="w-8 h-8 rounded-full" />
+        <span className="font-bold text-stone-700">Mati Mets</span>
+      </div>
+    </div>
+
+    {order.status === OrderStatus.COMPLETED && (
+      <button
+        onClick={() => setOpenReviewOrderId(openReviewOrderId === order.id ? null : order.id)}
+        className="bg-white border border-stone-200 text-stone-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-stone-50 transition-colors"
+      >
+        {openReviewOrderId === order.id ? 'Sulge' : 'Lisa arvustus'}
+      </button>
+    )}
+  </div>
+
+  <div
+    className={`grid transition-all duration-300 ease-in-out ${
+      openReviewOrderId === order.id ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0 mt-0'
+    }`}
+  >
+    <div className="overflow-hidden">
+      <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-4">
+        {order.items.map((item, idx) => {
+          const prod = products.find(p => p.id === item.productId);
+          const key = `${order.id}:${item.productId}`;
+          const draft = reviewDrafts[key] ?? { rating: 5, comment: '', saving: false };
+          const alreadyReviewed = reviews.some(
+            review =>
+              String(review.productId) === String(item.productId) &&
+              String(review.userId) === String(user.id)
+          );
+
+          return (
+            <div key={idx} className="bg-white rounded-2xl border border-stone-200 p-4">
+  <div className="flex items-center gap-3 mb-4">
+    <img src={prod?.image} className="w-12 h-12 rounded-xl object-cover bg-stone-100" />
+    <div>
+      <p className="font-bold text-stone-800">{item.title}</p>
+      <p className="text-xs text-stone-500">
+        {alreadyReviewed ? 'Sellele tootele on arvustus juba lisatud' : 'Lisa sellele tootele arvustus'}
+      </p>
+    </div>
+  </div>
+
+  {alreadyReviewed ? (
+    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-200">
+      <i className="fa-solid fa-circle-check"></i>
+      Arvustus lisatud
+    </div>
+  ) : (
+    <>
+      <div className="flex items-center gap-1 mb-4">
+        {[1, 2, 3, 4, 5].map(star => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => updateDraft(order.id, item.productId, { rating: star })}
+            className="text-2xl leading-none transition-transform hover:scale-110"
+          >
+            {star <= draft.rating ? '★' : '☆'}
+          </button>
+        ))}
+      </div>
+
+      <textarea
+        value={draft.comment}
+        onChange={(e) => updateDraft(order.id, item.productId, { comment: e.target.value })}
+        placeholder="Jaga oma kogemust selle tootega..."
+        className="w-full min-h-[110px] rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      />
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => submitReview(order.id, item.productId)}
+          disabled={draft.saving}
+          className="bg-emerald-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+        >
+          {draft.saving ? 'Salvestan...' : 'Postita arvustus'}
+        </button>
+      </div>
+    </>
+  )}
+</div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</div>
               </div>
             </div>
           ))}
