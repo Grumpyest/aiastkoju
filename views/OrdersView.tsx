@@ -51,6 +51,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
     const { data, error } = await supabase
   .from('reviews')
   .insert({
+    order_id: orderId,
     product_id: productId,
     user_id: user.id,
     rating: draft.rating,
@@ -58,6 +59,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
   })
   .select(`
     id,
+    order_id,
     product_id,
     user_id,
     rating,
@@ -79,6 +81,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
 setReviews(prev => [
   {
     id: String(data.id),
+    orderId: data.order_id ? String(data.order_id) : '',
     productId: String(data.product_id),
     userId: String(data.user_id),
     reviewerName: user.name || 'Kasutaja',
@@ -180,8 +183,8 @@ setReviews(prev => [
           const draft = reviewDrafts[key] ?? { rating: 5, comment: '', saving: false };
           const alreadyReviewed = reviews.some(
             review =>
-              String(review.productId) === String(item.productId) &&
-              String(review.userId) === String(user.id)
+              review.orderId === String(order.id) &&
+              String(review.productId) === String(item.productId)
           );
 
           return (

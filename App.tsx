@@ -70,7 +70,7 @@ setUser({
   });
 } else {
         await supabase.auth.signOut();
-        setUser(null);
+        setUser(null); 
       }
     }
   };
@@ -207,6 +207,7 @@ useEffect(() => {
   .from('reviews')
   .select(`
     id,
+    order_id,
     product_id,
     user_id,
     rating,
@@ -235,6 +236,7 @@ useEffect(() => {
 
 const mappedReviews = (reviewsData || []).map((r: any) => ({
   id: String(r.id),
+  orderId: r.order_id ? String(r.order_id) : '',
   productId: String(r.product_id),
   userId: String(r.user_id),
   reviewerName: r.profiles?.full_name || 'Kasutaja',
