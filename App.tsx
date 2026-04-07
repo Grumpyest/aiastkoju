@@ -330,39 +330,59 @@ const App: React.FC = () => {
   const t = useMemo(() => TRANSLATIONS[language], [language]);
   const productsWithReviewStats = useMemo(() => mergeProductsWithReviewStats(products, reviews), [products, reviews]);
 
+  const getCartQuantityBounds = (productId: string) => {
+    const product = products.find(item => item.id === productId);
+    const minQty = Math.max(1, Number(product?.minOrderQty ?? 1));
+    const rawStockQty = Number(product?.stockQty ?? 0);
+    const maxQty = rawStockQty > 0 ? rawStockQty : Number.MAX_SAFE_INTEGER;
+
+    return { product, minQty, maxQty };
+  };
+
   const handleAddToCart = (productId: string, quantity: number = 1) => {
+    const { product, minQty, maxQty } = getCartQuantityBounds(productId);
+    if (!product) return;
+
+    const requestedQty = Math.max(minQty, Number(quantity || minQty));
+
     setCart(prev => {
       const existing = prev.find(item => item.productId === productId);
 
       if (existing) {
-        return prev.map(item => (item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item));
+        return prev.map(item =>
+          item.productId === productId
+            ? { ...item, quantity: Math.min(maxQty, item.quantity + requestedQty) }
+            : item
+        );
       }
 
-      return [...prev, { productId, quantity }];
+      return [...prev, { productId, quantity: Math.min(maxQty, requestedQty) }];
     });
 
     showToast('Toode lisatud ostukorvi!', 'success');
   };
 
   const handleIncreaseCartQty = (productId: string) => {
+    const { maxQty } = getCartQuantityBounds(productId);
+
     setCart(prev =>
       prev.map(item =>
         item.productId === productId
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: Math.min(maxQty, item.quantity + 1) }
           : item
       )
     );
   };
 
   const handleDecreaseCartQty = (productId: string) => {
+    const { minQty } = getCartQuantityBounds(productId);
+
     setCart(prev =>
-      prev
-        .map(item =>
-          item.productId === productId
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
-        )
-        .filter(item => item.quantity > 0)
+      prev.map(item =>
+        item.productId === productId
+          ? { ...item, quantity: Math.max(minQty, item.quantity - 1) }
+          : item
+      )
     );
   };
 
@@ -541,6 +561,9 @@ const App: React.FC = () => {
             user={user}
             cart={cart}
             products={productsWithReviewStats}
+            onIncreaseQty={handleIncreaseCartQty}
+            onDecreaseQty={handleDecreaseCartQty}
+            onRemoveFromCart={handleRemoveFromCart}
             onComplete={completeOrder}
             onBack={() => setCurrentView('catalog')}
           />
@@ -568,6 +591,8 @@ const App: React.FC = () => {
         user={user}
         setUser={setUser}
         cart={cart}
+        onIncreaseQty={handleIncreaseCartQty}
+        onDecreaseQty={handleDecreaseCartQty}
         onRemoveFromCart={handleRemoveFromCart}
         onCheckout={handleGoToCheckout}
         language={language}

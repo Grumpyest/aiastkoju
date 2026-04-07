@@ -15,7 +15,8 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, user, reviews, setReviews, onAddToCart, onBuyNow, onBack, onNotify }) => {
-  const [quantity, setQuantity] = useState<number>(Number(product.minOrderQty ?? 1));
+  const minimumOrderQty = Math.max(1, Number(product.minOrderQty ?? 1));
+  const [quantity, setQuantity] = useState<number>(minimumOrderQty);
   
 const PLACEHOLDER = "/placeholder.png";
 
@@ -161,7 +162,7 @@ useEffect(() => {
       <div className="flex items-center justify-between mb-8">
         <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
         <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
-          <button onClick={() => setQuantity(q => Math.max(Number(product.minOrderQty ?? 1), (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
+          <button onClick={() => setQuantity(q => Math.max(minimumOrderQty, (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
           <span className="text-xl font-black w-8 text-center">{quantity}</span>
           <button onClick={() => setQuantity(q => Math.min(Number(product.stockQty ?? 999999), (q ?? 0) + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
         </div>

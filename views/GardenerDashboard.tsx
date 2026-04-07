@@ -886,7 +886,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Minimaalne tellimus</label>
-                  <input required type="number" min="1" value={newProduct.minOrderQty === 1 ? '' : newProduct.minOrderQty} onChange={(e)=>{const v=e.target.value; setNewProduct({...newProduct, minOrderQty: v===''?1:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                  <input required type="number" min="1" value={newProduct.minOrderQty ?? 1} onChange={(e)=>{const v=e.target.value; setNewProduct({...newProduct, minOrderQty: v===''?1:Math.max(1, parseInt(v,10) || 1)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2 col-span-full">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Kirjeldus</label>
@@ -960,7 +960,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Minimaalne tellimus</label>
-                  <input required type="number" min="1" value={editingProduct.minOrderQty === 1 ? '' : editingProduct.minOrderQty} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, minOrderQty: v===''?1:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                  <input required type="number" min="1" value={editingProduct.minOrderQty ?? 1} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, minOrderQty: v===''?1:Math.max(1, parseInt(v,10) || 1)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2 col-span-full">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Kirjeldus</label>

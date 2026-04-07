@@ -9,6 +9,8 @@ interface NavbarProps {
   user: User | null;
   setUser: (user: User | null) => void;
   cart: CartItem[];
+  onIncreaseQty: (id: string) => void;
+  onDecreaseQty: (id: string) => void;
   onRemoveFromCart: (id: string) => void;
   onCheckout: () => void;
   language: Language;
@@ -21,7 +23,7 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
-  currentView, setCurrentView, user, setUser, cart, onRemoveFromCart, onCheckout, language, setLanguage, t, products, authModal, setAuthModal, onNotify 
+  currentView, setCurrentView, user, setUser, cart, onIncreaseQty, onDecreaseQty, onRemoveFromCart, onCheckout, language, setLanguage, t, products, authModal, setAuthModal, onNotify 
 }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,6 +44,7 @@ const Navbar: React.FC<NavbarProps> = ({
     const product = products.find(p => p.id === item.productId);
     return acc + (product?.price || 0) * item.quantity;
   }, 0);
+  const cartItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -207,10 +210,65 @@ const handleRegister = async (e: React.FormEvent) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <button onClick={() => setIsCartOpen(!isCartOpen)} className="relative p-2 text-stone-500">
-              <i className="fa-solid fa-cart-shopping text-lg"></i>
-              {cart.length > 0 && <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-emerald-600 text-white text-[9px] font-bold flex items-center justify-center">{cart.length}</span>}
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setIsCartOpen(!isCartOpen)}
+                className={`relative rounded-xl p-2 transition-colors ${isCartOpen ? 'bg-emerald-50 text-emerald-700' : 'text-stone-500 hover:bg-stone-50'}`}
+                aria-label="Ava ostukorv"
+              >
+                <i className="fa-solid fa-cart-shopping text-lg"></i>
+                {cartItemsCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[9px] font-bold flex items-center justify-center">{cartItemsCount}</span>}
+              </button>
+
+              {isCartOpen && (
+                <>
+                  <div className="fixed inset-0 z-[45] bg-transparent" onClick={() => setIsCartOpen(false)}></div>
+                  <div className="absolute right-0 top-full z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] sm:w-80 bg-white shadow-2xl rounded-2xl border border-stone-100 overflow-hidden animate-fade-in">
+                    <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+                      <h3 className="font-bold text-stone-900 text-xs uppercase tracking-widest">Ostukorv</h3>
+                      <button onClick={() => setIsCartOpen(false)} className="text-stone-400 hover:text-stone-600"><i className="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto p-4 space-y-4">
+                      {cart.length === 0 ? <p className="text-center text-stone-500 py-8 italic text-sm">Ostukorv on tühi</p> : cart.map(item => {
+                        const product = products.find(p => p.id === item.productId);
+                        const minQty = Math.max(1, Number(product?.minOrderQty ?? 1));
+                        const maxQty = Number(product?.stockQty ?? 0) > 0 ? Number(product?.stockQty ?? 0) : Number.MAX_SAFE_INTEGER;
+                        const canDecrease = item.quantity > minQty;
+                        const canIncrease = item.quantity < maxQty;
+
+                        return (
+                          <div key={item.productId} className="flex gap-3 rounded-2xl border border-stone-100 p-3">
+                            <img src={product?.image} className="w-14 h-14 rounded-xl object-cover bg-stone-100" />
+                            <div className="flex-grow min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold truncate">{product?.title}</p>
+                                  <p className="text-[10px] text-stone-500 mt-1">{Number(product?.price ?? 0).toFixed(2)}€ / {product?.unit}</p>
+                                </div>
+                                <button onClick={() => onRemoveFromCart(item.productId)} className="text-[10px] text-red-500 font-bold whitespace-nowrap">Eemalda</button>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between gap-3">
+                                <div className="inline-flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
+                                  <button onClick={() => onDecreaseQty(item.productId)} disabled={!canDecrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-minus text-[10px]"></i></button>
+                                  <span className="min-w-[20px] text-center text-sm font-black text-stone-900">{item.quantity}</span>
+                                  <button onClick={() => onIncreaseQty(item.productId)} disabled={!canIncrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-plus text-[10px]"></i></button>
+                                </div>
+                                <span className="text-sm font-black text-stone-900">{(Number(product?.price ?? 0) * item.quantity).toFixed(2)}€</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {cart.length > 0 && (
+                      <div className="p-4 bg-stone-50 border-t border-stone-100">
+                        <button onClick={() => { onCheckout(); setIsCartOpen(false); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Vormista tellimus ({cartTotal.toFixed(2)}€)</button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             {user ? (
               <div className="flex items-center gap-3">
@@ -356,7 +414,7 @@ const handleRegister = async (e: React.FormEvent) => {
         </div>
       )}
 
-      {isCartOpen && (
+      {false && isCartOpen && (
         <>
           <div className="fixed inset-0 z-[45] bg-transparent" onClick={() => setIsCartOpen(false)}></div>
           <div className="absolute right-4 top-20 w-80 bg-white shadow-2xl rounded-2xl border border-stone-100 z-50 overflow-hidden animate-slide-up">
