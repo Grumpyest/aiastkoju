@@ -52,7 +52,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
 
   const myProducts = useMemo(() => products.filter(p => p.sellerId === user.id), [products, user.id]);
   const myOrders = useMemo(() => orders.filter(o => o.sellerId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [orders, user.id]);
-  const myReviews = useMemo(() => reviews.filter(r => myProducts.some(p => p.id === r.targetId)), [reviews, myProducts]);
+  const myReviews = useMemo(() => reviews.filter(r => myProducts.some(p => p.id === r.productId)), [reviews, myProducts]);
   
   const totalRevenue = myOrders.filter(o => o.status === OrderStatus.COMPLETED).reduce((acc, curr) => acc + curr.total, 0);
   const pendingOrdersCount = myOrders.filter(o => o.status === OrderStatus.NEW).length;
@@ -761,10 +761,10 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                <p className="text-stone-400 font-bold">Sinule pole veel arvustusi jäetud.</p>
             </div>
           ) : myReviews.map(review => {
-            const product = products.find(p => p.id === review.targetId);
+            const product = products.find(p => p.id === review.productId);
             return (
               <div key={review.id} className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm flex gap-6">
-                <img src={`https://i.pravatar.cc/150?u=${review.reviewerId}`} className="w-16 h-16 rounded-2xl shadow-sm border border-stone-50" />
+                <img src={`https://i.pravatar.cc/150?u=${review.userId}`} className="w-16 h-16 rounded-2xl shadow-sm border border-stone-50" />
                 <div className="flex-grow">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -772,7 +772,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                       <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{product?.title}</p>
                     </div>
                     <div className="flex text-yellow-400 text-[10px] gap-0.5">
-                      {[1, 2, 3, 4, 5].map(s => <i key={s} className={`fa-solid fa-star ${s <= review.stars ? 'text-yellow-400' : 'text-stone-100'}`}></i>)}
+                      {[1, 2, 3, 4, 5].map(s => <i key={s} className={`fa-solid fa-star ${s <= review.rating ? 'text-yellow-400' : 'text-stone-100'}`}></i>)}
                     </div>
                   </div>
                   <p className="text-stone-600 text-sm font-medium italic mt-4">"{review.comment}"</p>

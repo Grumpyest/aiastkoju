@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { User, UserRole, Language, Product, CartItem, Order, OrderStatus, Review } from './types';
 import { TRANSLATIONS, CATEGORIES } from './constants';
 import Navbar from './components/Navbar';
@@ -13,12 +12,39 @@ import ProfileView from './views/ProfileView';
 import CheckoutView from './views/CheckoutView';
 import { supabase } from './supabaseClient';
 
+const mergeProductsWithReviewStats = (products: Product[], reviews: Review[]) => {
+  const statsByProductId = new Map<string, { total: number; count: number }>();
+
+  for (const review of reviews) {
+    const productId = String(review.productId);
+    const rating = Number(review.rating ?? 0);
+    const current = statsByProductId.get(productId) ?? { total: 0, count: 0 };
+
+    statsByProductId.set(productId, {
+      total: current.total + rating,
+      count: current.count + 1,
+    });
+  }
+
+  return products.map(product => {
+    const stats = statsByProductId.get(String(product.id));
+    const reviewsCount = stats?.count ?? 0;
+    const rating = reviewsCount > 0 ? Number((stats!.total / reviewsCount).toFixed(1)) : 0;
+
+    return {
+      ...product,
+      rating,
+      reviewsCount,
+    };
+  });
+};
+
 const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || Language.ET);
   const [user, setUser] = useState<User | null>(() => {
-  const saved = localStorage.getItem('user');
-  return saved ? JSON.parse(saved) : null;
-});
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('cart');
     return saved ? JSON.parse(saved) : [];
@@ -27,17 +53,15 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  
+
   const [currentView, setCurrentView] = useState<'home' | 'catalog' | 'dashboard' | 'admin' | 'product' | 'orders' | 'profile' | 'checkout'>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<'none' | 'login' | 'register'>('none');
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  
-  const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
 
-  // Teavituste olek
+  const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -45,238 +69,279 @@ const App: React.FC = () => {
     setTimeout(() => setToast(null), 5000);
   };
 
-useEffect(() => {
-  // hoia user püsivalt sessioni järgi
-  const init = async () => {
-    const { data: sess } = await supabase.auth.getSession();
-    const u = sess.session?.user;
+  useEffect(() => {
+    const init = async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      const supabaseUser = sess.session?.user;
 
-    if (u) {
+      if (!supabaseUser) {
+        return;
+      }
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('id,email,full_name,phone,location,is_seller,avatar_url')
-        .eq('id', u.id)
+        .eq('id', supabaseUser.id)
         .maybeSingle();
 
-      if (profile) {
-setUser({
-  id: profile.id,
-  name: profile.full_name || (profile.email?.split('@')[0] ?? 'Kasutaja'),
-  email: profile.email || u.email || '',
-  phone: profile.phone || undefined,
-  location: profile.location || undefined,
-  role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
-  avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`,
-  });
-} else {
+      if (!profile) {
         await supabase.auth.signOut();
-        setUser(null); 
+        setUser(null);
+        return;
       }
+
+      setUser({
+        id: profile.id,
+        name: profile.full_name || (profile.email?.split('@')[0] ?? 'Kasutaja'),
+        email: profile.email || supabaseUser.email || '',
+        phone: profile.phone || undefined,
+        location: profile.location || undefined,
+        role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
+        avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`,
+      });
+    };
+
+    init();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          seller_id,
+          title,
+          description,
+          category,
+          price_cents,
+          unit,
+          stock_qty,
+          min_order_qty,
+          image_url,
+          is_active,
+          status,
+          created_at,
+          product_images (
+            url,
+            sort_order
+          )
+        `)
+        .eq('is_active', true)
+        .eq('status', 'ACTIVE')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showToast(error.message, 'error');
+        return;
+      }
+
+      const sellerIds = [...new Set((data || []).map((product: any) => String(product.seller_id)).filter(Boolean))];
+      const sellersById = new Map<string, { full_name?: string | null; location?: string | null }>();
+
+      if (sellerIds.length > 0) {
+        const { data: sellerRows, error: sellerError } = await supabase
+          .from('profiles')
+          .select('id, full_name, location')
+          .in('id', sellerIds);
+
+        if (sellerError) {
+          console.error('Failed to load seller profiles', sellerError);
+        } else {
+          for (const seller of sellerRows || []) {
+            sellersById.set(String(seller.id), seller);
+          }
+        }
+      }
+
+      const mapped: Product[] = (data || []).map((productRow: any) => {
+        const seller = sellersById.get(String(productRow.seller_id));
+
+        return {
+          id: String(productRow.id),
+          sellerId: String(productRow.seller_id),
+          sellerName: seller?.full_name || 'Müüja',
+          sellerLocation: seller?.location || '',
+          createdAt: String(productRow.created_at ?? ''),
+          title: productRow.title || '',
+          description: productRow.description || '',
+          category: productRow.category || 'Muu',
+          price: Number((productRow.price_cents ?? 0) / 100),
+          unit: productRow.unit || 'tk',
+          stockQty: Number(productRow.stock_qty ?? 0),
+          minOrderQty: Number(productRow.min_order_qty ?? 1),
+          image: productRow.image_url || '/placeholder.png',
+          images: productRow.product_images
+            ? productRow.product_images
+                .sort((a: any, b: any) => a.sort_order - b.sort_order)
+                .map((img: any) => img.url)
+            : [],
+          isActive: productRow.is_active === true,
+          status: productRow.status,
+          rating: 0,
+          reviewsCount: 0,
+        };
+      });
+
+      setProducts(mapped);
+    };
+
+    loadProducts();
+  }, []);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      const { data: orderRows, error: orderErr } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (orderErr) {
+        showToast(orderErr.message, 'error');
+        return;
+      }
+
+      const { data: itemRows, error: itemErr } = await supabase
+        .from('order_items')
+        .select('*');
+
+      if (itemErr) {
+        showToast(itemErr.message, 'error');
+        return;
+      }
+
+      const mapped: Order[] = (orderRows || []).map((orderRow: any) => ({
+        id: String(orderRow.id),
+        buyerId: String(orderRow.buyer_id),
+        buyerName: orderRow.buyer_name || '',
+        buyerPhone: orderRow.buyer_phone || '',
+        buyerEmail: orderRow.buyer_email || '',
+        sellerId: String(orderRow.seller_id),
+        sellerLocation: '',
+        status: orderRow.status as OrderStatus,
+        total: Number(orderRow.total ?? 0),
+        createdAt: String(orderRow.created_at ?? ''),
+        deliveryAddress: orderRow.delivery_address || '',
+        items: (itemRows || [])
+          .filter((itemRow: any) => String(itemRow.order_id) === String(orderRow.id))
+          .map((itemRow: any) => {
+            const product = products.find(p => String(p.id) === String(itemRow.product_id));
+
+            return {
+              productId: String(itemRow.product_id),
+              title: product?.title || 'Toode',
+              qty: Number(itemRow.quantity ?? 0),
+              price: Number(itemRow.unit_price ?? 0),
+            };
+          }),
+      }));
+
+      setOrders(mapped);
+    };
+
+    if (products.length > 0) {
+      loadOrders();
     }
-  };
+  }, [products]);
 
-  init();
+  useEffect(() => {
+    const loadReviews = async () => {
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from('reviews')
+        .select(`
+          id,
+          product_id,
+          user_id,
+          rating,
+          comment,
+          created_at,
+          profiles:user_id (
+            full_name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-  const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session?.user) setUser(null);
-  });
+      if (reviewsError) {
+        showToast(reviewsError.message, 'error');
+        return;
+      }
 
-  return () => { sub.subscription.unsubscribe(); };
-}, []);
+      const { data: repliesData, error: repliesError } = await supabase
+        .from('review_replies')
+        .select('id, review_id, user_id, user_name, text, role, created_at')
+        .order('created_at', { ascending: true });
 
-useEffect(() => {
-  const loadProducts = async () => {
-    const { data, error } = await supabase
-      .from('products')
-      .select(`
-      id,
-      seller_id,
-      title,
-      description,
-      category,
-      price_cents,
-      unit,
-      stock_qty,
-      min_order_qty,
-      image_url,
-      is_active,
-      status,
-      created_at,
-      product_images (
-        url,
-        sort_order
-      )
-`)
-      .eq('is_active', true)
-      .eq('status', 'ACTIVE')
-      .order('created_at', { ascending: false });
+      if (repliesError) {
+        showToast(repliesError.message, 'error');
+        return;
+      }
 
-    if (error) {
-      showToast(error.message, 'error');
-      return;
-    }
+      const mappedReviews: Review[] = (reviewsData || []).map((reviewRow: any) => ({
+        id: String(reviewRow.id),
+        productId: String(reviewRow.product_id),
+        userId: String(reviewRow.user_id),
+        reviewerName: reviewRow.profiles?.full_name || 'Kasutaja',
+        rating: Number(reviewRow.rating ?? 0),
+        comment: String(reviewRow.comment ?? ''),
+        createdAt: String(reviewRow.created_at ?? ''),
+        replies: (repliesData || [])
+          .filter((replyRow: any) => String(replyRow.review_id) === String(reviewRow.id))
+          .map((replyRow: any) => ({
+            id: String(replyRow.id),
+            userId: String(replyRow.user_id),
+            userName: String(replyRow.user_name),
+            text: String(replyRow.text ?? ''),
+            role: replyRow.role,
+            createdAt: String(replyRow.created_at ?? ''),
+          })),
+      }));
 
-    const mapped: Product[] = (data || []).map((p: any) => ({
-      id: String(p.id),
-      sellerId: p.seller_id,
-      sellerName: p.profiles?.full_name || 'Müüja',
-      sellerLocation: p.profiles?.location || '',
-      title: p.title || '',
-      description: p.description || '',
-      category: p.category || 'Muu',
-      price: Number((p.price_cents ?? 0) / 100),
-      unit: p.unit || 'tk',
-      stockQty: Number(p.stock_qty ?? 0),
-      minOrderQty: Number(p.min_order_qty ?? 1),
-      image: p.image_url || '/placeholder.png',
-      images: p.product_images 
-      ? p.product_images
-          .sort((a: any, b: any) => a.sort_order - b.sort_order)
-          .map((img: any) => img.url)
-      : [],
-      isActive: p.is_active === true,
-      rating: 0,
-      reviewsCount: 0,
-    }));
+      setReviews(mappedReviews);
+    };
 
-    setProducts(mapped);
-  };
+    loadReviews();
+  }, []);
 
-  loadProducts();
-}, []);
+  useEffect(() => {
+    localStorage.setItem('lang', language);
+  }, [language]);
 
-useEffect(() => {
-  const loadOrders = async () => {
-    const { data: orderRows, error: orderErr } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+  useEffect(() => {
+    localStorage.setItem('user', JSON.stringify(user));
+  }, [user]);
 
-    if (orderErr) {
-      showToast(orderErr.message, 'error');
-      return;
-    }
-
-    const { data: itemRows, error: itemErr } = await supabase
-      .from('order_items')
-      .select('*');
-
-    if (itemErr) {
-      showToast(itemErr.message, 'error');
-      return;
-    }
-
-    const mapped: Order[] = (orderRows || []).map((o: any) => ({
-      id: String(o.id),
-      buyerId: String(o.buyer_id),
-      buyerName: o.buyer_name || '',
-      buyerPhone: o.buyer_phone || '',
-      buyerEmail: o.buyer_email || '',
-      sellerId: String(o.seller_id),
-      sellerLocation: '',
-      status: o.status as OrderStatus,
-      total: Number(o.total ?? 0),
-      createdAt: String(o.created_at ?? ''),
-      deliveryAddress: o.delivery_address || '',
-      items: (itemRows || [])
-        .filter((i: any) => String(i.order_id) === String(o.id))
-        .map((i: any) => {
-          const product = products.find(p => String(p.id) === String(i.product_id));
-
-          return {
-            productId: String(i.product_id),
-            title: product?.title || 'Toode',
-            qty: Number(i.quantity ?? 0),
-            price: Number(i.unit_price ?? 0),
-          };
-        }),
-    }));
-
-    setOrders(mapped);
-  };
-
-  if (products.length > 0) {
-    loadOrders();
-  }
-}, [products]);
-
-
-useEffect(() => {
-  const loadReviews = async () => {
- const { data: reviewsData, error: reviewsError } = await supabase
-  .from('reviews')
-  .select(`
-    id,
-    order_id,
-    product_id,
-    user_id,
-    rating,
-    comment,
-    created_at,
-    profiles:user_id (
-      full_name
-    )
-  `)
-  .order('created_at', { ascending: false });
-
-    if (reviewsError) {
-      showToast(reviewsError.message, 'error');
-      return;
-    }
-
-    const { data: repliesData, error: repliesError } = await supabase
-      .from('review_replies')
-      .select('id, review_id, user_id, user_name, text, role, created_at')
-      .order('created_at', { ascending: true });
-
-    if (repliesError) {
-      showToast(repliesError.message, 'error');
-      return;
-    }
-
-const mappedReviews = (reviewsData || []).map((r: any) => ({
-  id: String(r.id),
-  orderId: r.order_id ? String(r.order_id) : '',
-  productId: String(r.product_id),
-  userId: String(r.user_id),
-  reviewerName: r.profiles?.full_name || 'Kasutaja',
-  rating: Number(r.rating ?? 0),
-  comment: String(r.comment ?? ''),
-  createdAt: String(r.created_at ?? ''),
-  replies: (repliesData || [])
-    .filter((rep: any) => String(rep.review_id) === String(r.id))
-    .map((rep: any) => ({
-      id: String(rep.id),
-      userId: String(rep.user_id),
-      userName: String(rep.user_name),
-      text: String(rep.text ?? ''),
-      role: rep.role,
-      createdAt: String(rep.created_at ?? ''),
-    })),
-}));
-
-    setReviews(mappedReviews);
-  };
-
-  loadReviews();
-}, []);
-
-  useEffect(() => { localStorage.setItem('lang', language); }, [language]);
-  useEffect(() => { localStorage.setItem('user', JSON.stringify(user)); }, [user]);
-  useEffect(() => { localStorage.setItem('cart', JSON.stringify(cart)); }, [cart]);
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
 
   const t = useMemo(() => TRANSLATIONS[language], [language]);
+  const productsWithReviewStats = useMemo(() => mergeProductsWithReviewStats(products, reviews), [products, reviews]);
 
   const handleAddToCart = (productId: string, quantity: number = 1) => {
     setCart(prev => {
       const existing = prev.find(item => item.productId === productId);
-      if (existing) return prev.map(item => item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item);
+
+      if (existing) {
+        return prev.map(item => (item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item));
+      }
+
       return [...prev, { productId, quantity }];
     });
+
     showToast('Toode lisatud ostukorvi!', 'success');
   };
 
-    const handleIncreaseCartQty = (productId: string) => {
+  const handleIncreaseCartQty = (productId: string) => {
     setCart(prev =>
       prev.map(item =>
         item.productId === productId
@@ -304,27 +369,31 @@ const mappedReviews = (reviewsData || []).map((r: any) => ({
   };
 
   const handleGoToCheckout = () => {
-    if (!user) { 
+    if (!user) {
       setIsAuthModalOpen('login');
-      return; 
+      return;
     }
+
     if (cart.length === 0) {
-      showToast("Sinu ostukorv on tühi!", "error");
+      showToast('Sinu ostukorv on tühi!', 'error');
       setCurrentView('catalog');
       return;
     }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setCurrentView('checkout');
   };
 
   const handleBuyNow = (productId: string, quantity: number = 1) => {
     handleAddToCart(productId, quantity);
+
     if (!user) {
       setIsAuthModalOpen('login');
-    } else {
-      setCurrentView('checkout');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
+
+    setCurrentView('checkout');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const completeOrder = (newOrders: Order[]) => {
@@ -332,7 +401,7 @@ const mappedReviews = (reviewsData || []).map((r: any) => ({
     setCart([]);
     setCurrentView('orders');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    showToast("Tellimus esitatud! Müüjad võtavad teiega ühendust.", "success");
+    showToast('Tellimus esitatud! Müüjad võtavad teiega ühendust.', 'success');
   };
 
   const onSearch = (query: string) => {
@@ -348,91 +417,167 @@ const mappedReviews = (reviewsData || []).map((r: any) => ({
   };
 
   const renderView = () => {
-    const onViewProduct = (id: string) => { setSelectedProductId(id); setCurrentView('product'); window.scrollTo({ top: 0 }); };
+    const onViewProduct = (id: string) => {
+      setSelectedProductId(id);
+      setCurrentView('product');
+      window.scrollTo({ top: 0 });
+    };
 
     switch (currentView) {
       case 'home':
-        return <HomeView onSearch={onSearch} onSelectCategory={onSelectCategory} onViewProduct={onViewProduct} t={t} products={products} />;
+        return (
+          <HomeView
+            onSearch={onSearch}
+            onSelectCategory={onSelectCategory}
+            onViewProduct={onViewProduct}
+            t={t}
+            products={productsWithReviewStats}
+          />
+        );
       case 'catalog':
-        return <CatalogView onViewProduct={onViewProduct} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} t={t} products={products} initialSearch={searchQuery} initialCategory={activeCategory} />;
+        return (
+          <CatalogView
+            onViewProduct={onViewProduct}
+            onAddToCart={handleAddToCart}
+            onBuyNow={handleBuyNow}
+            t={t}
+            products={productsWithReviewStats}
+            initialSearch={searchQuery}
+            initialCategory={activeCategory}
+          />
+        );
       case 'dashboard':
         return user?.role === UserRole.GARDENER ? (
-          <GardenerDashboard 
-            user={user} 
-            products={products} 
-            orders={orders} 
+          <GardenerDashboard
+            user={user}
+            products={productsWithReviewStats}
+            orders={orders}
             reviews={reviews}
-            setProducts={setProducts} 
-            setOrders={setOrders} 
+            setProducts={setProducts}
+            setOrders={setOrders}
             setReviews={setReviews}
             onNotify={showToast}
           />
-        ) : <HomeView onSearch={onSearch} onSelectCategory={onSelectCategory} onViewProduct={onViewProduct} t={t} products={products} />;
+        ) : (
+          <HomeView
+            onSearch={onSearch}
+            onSelectCategory={onSelectCategory}
+            onViewProduct={onViewProduct}
+            t={t}
+            products={productsWithReviewStats}
+          />
+        );
       case 'admin':
-        return user?.role === UserRole.ADMIN ? <AdminDashboard products={products} setProducts={setProducts} /> : <HomeView onSearch={onSearch} onSelectCategory={onSelectCategory} onViewProduct={onViewProduct} t={t} products={products} />;
+        return user?.role === UserRole.ADMIN ? (
+          <AdminDashboard products={productsWithReviewStats} setProducts={setProducts} />
+        ) : (
+          <HomeView
+            onSearch={onSearch}
+            onSelectCategory={onSelectCategory}
+            onViewProduct={onViewProduct}
+            t={t}
+            products={productsWithReviewStats}
+          />
+        );
       case 'profile':
-        return user ? <ProfileView user={user} setUser={setUser} setCurrentView={setCurrentView} t={t} onBack={() => setCurrentView('home')} onNotify={showToast} /> : null;
-      case 'product':
-        const prod = products.find(p => p.id === selectedProductId);
-        return prod ? (
-          <ProductDetail 
-            product={prod} 
+        return user ? (
+          <ProfileView
+            user={user}
+            setUser={setUser}
+            setCurrentView={setCurrentView}
+            t={t}
+            onBack={() => setCurrentView('home')}
+            onNotify={showToast}
+          />
+        ) : null;
+      case 'product': {
+        const product = productsWithReviewStats.find(p => p.id === selectedProductId);
+
+        return product ? (
+          <ProductDetail
+            product={product}
             user={user}
             reviews={reviews}
             setReviews={setReviews}
-            onAddToCart={handleAddToCart} 
+            onAddToCart={handleAddToCart}
             onBuyNow={handleBuyNow}
-            onBack={() => setCurrentView('catalog')} 
+            onBack={() => setCurrentView('catalog')}
             onNotify={showToast}
           />
-        ) : <div>Toodet ei leitud</div>;
+        ) : (
+          <div>Toodet ei leitud</div>
+        );
+      }
       case 'orders':
-       return user ? (
-  <OrdersView
-    user={user}
-    orders={orders}
-    products={products}
-    reviews={reviews}
-    setReviews={setReviews}
-    cart={cart}
-    onIncreaseQty={handleIncreaseCartQty}
-    onDecreaseQty={handleDecreaseCartQty}
-    onRemoveFromCart={handleRemoveFromCart}
-    onCheckout={handleGoToCheckout}
-    onNotify={showToast}
-  />
-) : (
-  <HomeView onSearch={onSearch} onSelectCategory={onSelectCategory} onViewProduct={onViewProduct} t={t} products={products} />
-);
+        return user ? (
+          <OrdersView
+            user={user}
+            orders={orders}
+            products={productsWithReviewStats}
+            reviews={reviews}
+            setReviews={setReviews}
+            cart={cart}
+            onIncreaseQty={handleIncreaseCartQty}
+            onDecreaseQty={handleDecreaseCartQty}
+            onRemoveFromCart={handleRemoveFromCart}
+            onCheckout={handleGoToCheckout}
+            onNotify={showToast}
+          />
+        ) : (
+          <HomeView
+            onSearch={onSearch}
+            onSelectCategory={onSelectCategory}
+            onViewProduct={onViewProduct}
+            t={t}
+            products={productsWithReviewStats}
+          />
+        );
       case 'checkout':
         return user ? (
-          <CheckoutView 
-            user={user} 
-            cart={cart} 
-            products={products} 
+          <CheckoutView
+            user={user}
+            cart={cart}
+            products={productsWithReviewStats}
             onComplete={completeOrder}
             onBack={() => setCurrentView('catalog')}
           />
-        ) : <div className="py-20 text-center">Palun logi sisse, et kassasse pääseda.</div>;
+        ) : (
+          <div className="py-20 text-center">Palun logi sisse, et kassasse pääseda.</div>
+        );
       default:
-        return <HomeView onSearch={onSearch} onSelectCategory={onSelectCategory} onViewProduct={onViewProduct} t={t} products={products} />;
+        return (
+          <HomeView
+            onSearch={onSearch}
+            onSelectCategory={onSelectCategory}
+            onViewProduct={onViewProduct}
+            t={t}
+            products={productsWithReviewStats}
+          />
+        );
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar 
-        currentView={currentView} setCurrentView={setCurrentView}
-        user={user} setUser={setUser} cart={cart}
-        onRemoveFromCart={handleRemoveFromCart} onCheckout={handleGoToCheckout}
-        language={language} setLanguage={setLanguage} t={t} products={products}
-        authModal={isAuthModalOpen} setAuthModal={setIsAuthModalOpen}
+      <Navbar
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        user={user}
+        setUser={setUser}
+        cart={cart}
+        onRemoveFromCart={handleRemoveFromCart}
+        onCheckout={handleGoToCheckout}
+        language={language}
+        setLanguage={setLanguage}
+        t={t}
+        products={productsWithReviewStats}
+        authModal={isAuthModalOpen}
+        setAuthModal={setIsAuthModalOpen}
         onNotify={showToast}
       />
-      
+
       <main className="flex-grow">{renderView()}</main>
 
-      {/* Teavituste kuvamine */}
       {toast && (
         <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border-2 animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-red-50 border-red-500 text-red-800'}`}>
           <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}`}></i>

@@ -44,6 +44,7 @@ export interface Product {
   sellerId: string;
   sellerName: string;
   sellerLocation?: string;
+  createdAt?: string;
   title: string;
   description: string;
   category: string;
@@ -96,12 +97,10 @@ export interface ReviewReply {
 
 export interface Review {
   id: string;
-  orderId: string;
-  reviewerId: string;
+  productId: string;
+  userId: string;
   reviewerName: string;
-  targetType: 'product' | 'seller';
-  targetId: string;
-  stars: number;
+  rating: number;
   comment: string;
   replies?: ReviewReply[];
   createdAt: string;
