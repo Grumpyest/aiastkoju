@@ -136,7 +136,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
+    <div className="max-w-6xl mx-auto px-4 py-12">
       <button
         onClick={onBack}
         className="mb-8 flex items-center gap-2 text-emerald-600 font-bold hover:translate-x-1 transition-transform"
@@ -144,8 +144,8 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
         <i className="fa-solid fa-arrow-left"></i> Tagasi kataloogi
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        <div className="order-1 lg:order-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] gap-12 items-start">
+        <div className="order-1 lg:order-2 lg:w-full lg:max-w-[420px] lg:justify-self-end space-y-8">
           <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-stone-100 shadow-sm lg:sticky lg:top-24">
             <h3 className="text-lg font-bold text-stone-900 mb-6 border-b border-stone-50 pb-4">Ostukorvi kokkuvõte</h3>
 
@@ -206,8 +206,8 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                   </button>
                                 </div>
 
-                                <div className="mt-3 flex items-center justify-between gap-3">
-                                  <div className="inline-flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
+                                <div className="mt-3 space-y-3">
+                                  <div className="inline-flex w-fit items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
                                     <button
                                       type="button"
                                       onClick={() => onDecreaseQty(item.productId)}
@@ -228,14 +228,16 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                       <i className="fa-solid fa-plus text-[10px]"></i>
                                     </button>
                                   </div>
-                                  <span className="text-sm font-black text-stone-900">
-                                    {(item.price * item.quantity).toFixed(2)}€
-                                  </span>
-                                </div>
 
-                                <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                                  Minimaalne tellimus: {minQty} {item.unit}
-                                </p>
+                                  <div className="flex items-end justify-between gap-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                                      Minimaalne tellimus: {minQty} {item.unit}
+                                    </p>
+                                    <span className="shrink-0 text-base font-black text-stone-900">
+                                      {(item.price * item.quantity).toFixed(2)}€
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -247,14 +249,14 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
               })}
             </div>
 
-            <div className="pt-6 border-t border-stone-100 flex justify-between items-center">
+            <div className="pt-6 border-t border-stone-100 flex justify-between items-center gap-4">
               <span className="text-sm font-bold text-stone-400 uppercase">Kokku tasuda:</span>
-              <span className="text-3xl font-black text-emerald-800">{total.toFixed(2)}€</span>
+              <span className="shrink-0 text-3xl font-black text-emerald-800">{total.toFixed(2)}€</span>
             </div>
           </div>
         </div>
 
-        <div className="order-2 lg:order-1 lg:col-span-2 space-y-8">
+        <div className="order-2 lg:order-1 space-y-8">
           <div className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm">
             <h2 className="text-2xl font-black text-stone-900 mb-8 flex items-center gap-3">
               <i className="fa-solid fa-truck-fast text-emerald-600"></i> Tellimuse andmed
