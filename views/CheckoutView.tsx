@@ -141,7 +141,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
         onClick={onBack}
         className="mb-8 flex items-center gap-2 text-emerald-600 font-bold hover:translate-x-1 transition-transform"
       >
-        <i className="fa-solid fa-arrow-left"></i> Tagasi ostukorvi
+        <i className="fa-solid fa-arrow-left"></i> Tagasi kataloogi
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
