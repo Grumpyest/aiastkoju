@@ -232,6 +232,7 @@ const App: React.FC = () => {
         total: Number(orderRow.total ?? 0),
         createdAt: String(orderRow.created_at ?? ''),
         deliveryAddress: orderRow.delivery_address || '',
+        notes: orderRow.notes || '',
         items: (itemRows || [])
           .filter((itemRow: any) => String(itemRow.order_id) === String(orderRow.id))
           .map((itemRow: any) => {
@@ -260,6 +261,7 @@ const App: React.FC = () => {
         .from('reviews')
         .select(`
           id,
+          order_id,
           product_id,
           user_id,
           rating,
@@ -288,6 +290,7 @@ const App: React.FC = () => {
 
       const mappedReviews: Review[] = (reviewsData || []).map((reviewRow: any) => ({
         id: String(reviewRow.id),
+        orderId: reviewRow.order_id ? String(reviewRow.order_id) : null,
         productId: String(reviewRow.product_id),
         userId: String(reviewRow.user_id),
         reviewerName: reviewRow.profiles?.full_name || 'Kasutaja',

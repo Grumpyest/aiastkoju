@@ -110,7 +110,8 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ user, cart, products, onCom
             price: si.price
           })),
           createdAt: orderRow.created_at,
-          deliveryAddress: formData.address
+          deliveryAddress: formData.address,
+          notes: formData.notes,
         });
       }
 

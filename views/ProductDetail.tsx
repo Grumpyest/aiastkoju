@@ -38,8 +38,6 @@ useEffect(() => {
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
-  const [newReviewComment, setNewReviewComment] = useState('');
-  const [newReviewStars, setNewReviewStars] = useState(5);
   const [replyingToReviewId, setReplyingToReviewId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
@@ -53,52 +51,6 @@ useEffect(() => {
   const sum = productReviews.reduce((acc, r) => acc + Number(r.rating || 0), 0);
   return (sum / productReviews.length).toFixed(1);
 }, [productReviews]);
-
-const handleAddReview = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!user) {
-    onNotify?.('Palun logi sisse!', 'error');
-    return;
-  }
-
-  if (!newReviewComment.trim()) {
-    onNotify?.('Kirjuta arvustus.', 'error');
-    return;
-  }
-
-  const { data, error } = await supabase
-    .from('reviews')
-    .insert({
-      product_id: product.id,
-      user_id: user.id,
-      rating: newReviewStars,
-      comment: newReviewComment.trim(),
-    })
-    .select()
-    .single();
-
-  if (error) {
-    onNotify?.(error.message, 'error');
-    return;
-  }
-
-  const savedReview = {
-    id: String(data.id),
-    productId: String(data.product_id),
-    userId: String(data.user_id),
-    reviewerName: user.name,
-    rating: Number(data.rating ?? 0),
-    comment: String(data.comment ?? ''),
-    createdAt: String(data.created_at ?? ''),
-    replies: [],
-  };
-
-  setReviews(prev => [savedReview, ...prev]);
-  setNewReviewComment('');
-  setNewReviewStars(5);
-  onNotify?.('Arvustus postitatud!', 'success');
-};
 
  const handleReply = async (reviewId: string) => {
   if (!user || !replyText.trim()) return;
@@ -228,16 +180,21 @@ const handleAddReview = async (e: React.FormEvent) => {
         <h2 className="text-3xl font-black text-stone-900 mb-8">Arvustused ja vastused</h2>
 
         {user ? (
-          <form onSubmit={handleAddReview} className="bg-white rounded-[32px] p-8 border border-stone-100 shadow-sm mb-12 space-y-4">
-            <div className="flex gap-2 mb-2">
-              {[1, 2, 3, 4, 5].map(s => (
-                <button key={s} type="button" onClick={() => setNewReviewStars(s)} className={`text-2xl transition-all ${s <= newReviewStars ? 'text-yellow-400' : 'text-stone-200'}`}><i className="fa-solid fa-star"></i></button>
-              ))}
+          <div className="bg-emerald-50 rounded-[32px] p-8 border border-emerald-100 shadow-sm mb-12">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white text-emerald-600 flex items-center justify-center shrink-0">
+                <i className="fa-solid fa-receipt"></i>
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-stone-900 mb-2">Arvustus käib tellimuse kaudu</h3>
+                <p className="text-stone-600 leading-relaxed">
+                  Selle toote arvustuse saad jätta pärast tellimuse täitmist vaates <span className="font-bold">Minu tellimused</span>.
+                  Nii saab sama toodet hinnata iga eraldi tellimuse põhjal.
+                </p>
+              </div>
             </div>
-            <textarea required placeholder="Jaga oma kogemust selle tootega..." className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px]" value={newReviewComment} onChange={e => setNewReviewComment(e.target.value)} />
-            <button type="submit" className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all">Postita arvustus</button>
-          </form>
-        ) : <p className="text-center text-stone-400 py-8 italic bg-stone-50 rounded-2xl mb-12">Logi sisse, et jätta arvustus</p>}
+          </div>
+        ) : <p className="text-center text-stone-400 py-8 italic bg-stone-50 rounded-2xl mb-12">Logi sisse, et jätta arvustus tellimuse kaudu.</p>}
 
         <div className="space-y-12">
           {productReviews.length === 0 ? <p className="text-stone-400 text-center py-10">Sellel tootel pole veel arvustusi.</p> : productReviews.map(review => (

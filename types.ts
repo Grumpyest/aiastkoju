@@ -84,6 +84,7 @@ export interface Order {
   createdAt: string;
   deliveryMethod?: string;
   deliveryAddress?: string;
+  notes?: string;
 }
 
 export interface ReviewReply {
@@ -97,6 +98,7 @@ export interface ReviewReply {
 
 export interface Review {
   id: string;
+  orderId?: string | null;
   productId: string;
   userId: string;
   reviewerName: string;

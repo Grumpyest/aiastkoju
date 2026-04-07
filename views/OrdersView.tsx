@@ -44,11 +44,12 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
     const alreadyReviewed = reviews.some(
       review =>
         review.userId === user.id &&
+        review.orderId === orderId &&
         String(review.productId) === String(productId)
     );
 
     if (alreadyReviewed) {
-      onNotify?.('Selle toote kohta on sul arvustus juba olemas.', 'error');
+      onNotify?.('Selle tellimuse tootele on arvustus juba lisatud.', 'error');
       return;
     }
 
@@ -62,6 +63,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
     const { data, error } = await supabase
       .from('reviews')
       .insert({
+        order_id: orderId,
         product_id: productId,
         user_id: user.id,
         rating: draft.rating,
@@ -69,6 +71,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
       })
       .select(`
         id,
+        order_id,
         product_id,
         user_id,
         rating,
@@ -95,6 +98,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
     setReviews(prev => [
       {
         id: String(data.id),
+        orderId: data.order_id ? String(data.order_id) : null,
         productId: String(data.product_id),
         userId: String(data.user_id),
         reviewerName: reviewerName || user.name || 'Kasutaja',
@@ -199,6 +203,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                           const alreadyReviewed = reviews.some(
                             review =>
                               review.userId === user.id &&
+                              review.orderId === order.id &&
                               String(review.productId) === String(item.productId)
                           );
 
@@ -209,7 +214,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                                 <div>
                                   <p className="font-bold text-stone-800">{item.title}</p>
                                   <p className="text-xs text-stone-500">
-                                    {alreadyReviewed ? 'Sellele tootele on arvustus juba lisatud' : 'Lisa sellele tootele arvustus'}
+                                    {alreadyReviewed ? 'Selle tellimuse tootele on arvustus juba lisatud' : 'Lisa sellele tellimuse reale arvustus'}
                                   </p>
                                 </div>
                               </div>

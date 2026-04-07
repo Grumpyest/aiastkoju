@@ -308,6 +308,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       id: created.id,
       sellerId: created.seller_id,
       sellerName: user.name,
+      createdAt: String(created.created_at ?? ''),
       sellerLocation: user.location || 'Määramata',
       title: created.title,
       description: created.description || '',
@@ -477,7 +478,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
   try {
     const { error } = await supabase
       .from('products')
-      .update({ is_active: false, status: 'INACTIVE' })
+      .update({ is_active: false, status: ProductStatus.ARCHIVED })
       .eq('id', productId);
 
     if (error) throw error;
@@ -496,6 +497,19 @@ const handleSaveEdit = async (e: React.FormEvent) => {
       case OrderStatus.CONFIRMED: return <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Kinnitatud</span>;
       case OrderStatus.COMPLETED: return <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Täidetud</span>;
       case OrderStatus.CANCELLED: return <span className="bg-stone-100 text-stone-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Tühistatud</span>;
+    }
+  };
+
+  const getProductStatusBadge = (status?: ProductStatus) => {
+    switch (status) {
+      case ProductStatus.ACTIVE:
+        return <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-widest">Aktiivne</span>;
+      case ProductStatus.PENDING:
+        return <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-full uppercase tracking-widest">Ootel</span>;
+      case ProductStatus.ARCHIVED:
+        return <span className="text-[10px] font-bold text-stone-600 bg-stone-100 px-2 py-1 rounded-full uppercase tracking-widest">Arhiveeritud</span>;
+      default:
+        return null;
     }
   };
 
@@ -574,7 +588,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
               <h3 className="text-2xl font-black text-emerald-700">{totalRevenue.toFixed(2)}€</h3>
             </div>
             <div className="bg-white p-6 rounded-[32px] border border-stone-100 shadow-sm">
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Tellimused</p>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Uusi tellimusi</p>
               <h3 className="text-2xl font-black text-amber-600">{pendingOrdersCount}</h3>
             </div>
             <div className="bg-white p-6 rounded-[32px] border border-stone-100 shadow-sm">
@@ -653,9 +667,26 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                  </div>
                </div>
                <div className="p-6">
-                 <div className="flex justify-between items-start mb-2">
-                   <h3 className="font-black text-stone-900 text-lg">{p.title}</h3>
-                   <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-tight">{p.category}</span>
+                 <div className="flex justify-between items-start gap-4 mb-2">
+                   <div>
+                     <h3 className="font-black text-stone-900 text-lg">{p.title}</h3>
+                     <p className="text-xs text-stone-500 mt-1">{p.category}</p>
+                   </div>
+                   {getProductStatusBadge(p.status)}
+                 </div>
+                 <div className="flex flex-wrap gap-2 mt-4">
+                   <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full uppercase tracking-widest">
+                     <i className="fa-solid fa-star mr-1"></i>
+                     {p.reviewsCount > 0 ? Number(p.rating ?? 0).toFixed(1) : '-'} / {p.reviewsCount} arvustust
+                   </span>
+                   <span className="text-[10px] font-bold text-stone-500 bg-stone-100 px-3 py-1 rounded-full uppercase tracking-widest">
+                     Min: {p.minOrderQty} {p.unit}
+                   </span>
+                   {Number(p.stockQty ?? 0) <= 5 && (
+                     <span className="text-[10px] font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full uppercase tracking-widest">
+                       Varu otsakorral
+                     </span>
+                   )}
                  </div>
                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-stone-50">
                     <div>
@@ -717,6 +748,16 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                         <p className="text-sm font-bold text-stone-900">{order.buyerName}</p>
                         <p className="text-xs text-stone-500">{order.buyerPhone || order.buyerEmail}</p>
                       </div>
+                    </div>
+                  </div>
+                  <div className="bg-stone-50 rounded-2xl p-4 space-y-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Tarneaadress</p>
+                      <p className="text-sm font-medium text-stone-700">{order.deliveryAddress || 'Aadress puudub'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Ostja soovid</p>
+                      <p className="text-sm font-medium text-stone-700">{order.notes || 'Lisamarkusi ei lisatud.'}</p>
                     </div>
                   </div>
                   
@@ -843,6 +884,10 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Laoseis</label>
                   <input required type="number" value={newProduct.stockQty === 0 ? '' : newProduct.stockQty} onChange={(e)=>{const v=e.target.value; setNewProduct({...newProduct, stockQty: v===''?0:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Minimaalne tellimus</label>
+                  <input required type="number" min="1" value={newProduct.minOrderQty === 1 ? '' : newProduct.minOrderQty} onChange={(e)=>{const v=e.target.value; setNewProduct({...newProduct, minOrderQty: v===''?1:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                </div>
                 <div className="space-y-2 col-span-full">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Kirjeldus</label>
                   <textarea required rows={3} value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none" />
@@ -894,12 +939,28 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   <input required value={editingProduct.title} onChange={e => setEditingProduct({...editingProduct, title: e.target.value})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 focus:ring-2 focus:ring-emerald-500 outline-none font-bold" />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Kategooria</label>
+                  <select required value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold">
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Hind (€)</label>
                   <input required type="number" step="0.01" value={editingProduct.price === 0 ? '' : editingProduct.price} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, price: v===''?0:parseFloat(v)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Uhik</label>
+                  <select required value={editingProduct.unit} onChange={e => setEditingProduct({...editingProduct, unit: e.target.value})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold">
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Laoseis</label>
                   <input required type="number" value={editingProduct.stockQty === 0 ? '' : editingProduct.stockQty} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, stockQty: v===''?0:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Minimaalne tellimus</label>
+                  <input required type="number" min="1" value={editingProduct.minOrderQty === 1 ? '' : editingProduct.minOrderQty} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, minOrderQty: v===''?1:parseInt(v,10)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2 col-span-full">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Kirjeldus</label>
