@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Order, OrderStatus, Product, Review, CartItem } from '../types';
 import { supabase } from '../supabaseClient';
+import { buildExternalMapUrl } from '../utils/location';
 
 interface OrdersViewProps {
   user: User;
@@ -140,47 +141,103 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
         </div>
       ) : (
         <div className="space-y-6">
-          {myOrders.map(order => (
-            <div key={order.id} className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-stone-100 flex flex-wrap justify-between items-center gap-4 bg-stone-50/50">
-                <div>
-                  <p className="text-xs text-stone-400 font-bold uppercase tracking-widest mb-1">Tellimus #{order.id.slice(-6).toUpperCase()}</p>
-                  <p className="text-sm text-stone-600">{new Date(order.createdAt).toLocaleDateString()} kl {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  {getStatusBadge(order.status)}
-                  <p className="text-xl font-bold text-emerald-700">{order.total.toFixed(2)}€</p>
-                </div>
-              </div>
+          {myOrders.map(order => {
+            const sellerMapUrl = order.sellerLocation
+              ? buildExternalMapUrl({
+                  label: order.sellerLocation,
+                  fallbackQuery: order.sellerLocation,
+                })
+              : null;
+            const buyerMapUrl = order.deliveryAddress
+              ? buildExternalMapUrl({
+                  label: order.deliveryAddress,
+                  fallbackQuery: order.deliveryAddress,
+                })
+              : null;
 
-              <div className="p-6">
-                <div className="space-y-4">
-                  {order.items.map((item, idx) => {
-                    const product = products.find(p => p.id === item.productId);
+            return (
+              <div key={order.id} className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-stone-100 flex flex-wrap justify-between items-center gap-4 bg-stone-50/50">
+                  <div>
+                    <p className="text-xs text-stone-400 font-bold uppercase tracking-widest mb-1">Tellimus #{order.id.slice(-6).toUpperCase()}</p>
+                    <p className="text-sm text-stone-600">{new Date(order.createdAt).toLocaleDateString()} kl {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {getStatusBadge(order.status)}
+                    <p className="text-xl font-bold text-emerald-700">{order.total.toFixed(2)}€</p>
+                  </div>
+                </div>
 
-                    return (
-                      <div key={idx} className="flex justify-between items-center text-sm">
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {order.items.map((item, idx) => {
+                      const product = products.find(p => p.id === item.productId);
+
+                      return (
+                        <div key={idx} className="flex justify-between items-center text-sm gap-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <img src={product?.image} className="w-10 h-10 rounded object-cover bg-stone-100" />
+                            <div className="min-w-0">
+                              <p className="font-bold text-stone-800 truncate">{item.title}</p>
+                              <p className="text-xs text-stone-500">{item.qty} {product?.unit || 'tk'} x {item.price}€</p>
+                            </div>
+                          </div>
+                          <p className="font-medium text-stone-900 shrink-0">{(item.qty * item.price).toFixed(2)}€</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-8 pt-6 border-t border-stone-100 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-6 items-start">
+                    <div className="space-y-4">
+                      <div className={`transition-all duration-300 ${openReviewOrderId === order.id ? '-translate-y-1' : 'translate-y-0'}`}>
+                        <p className="text-xs font-bold text-stone-400 uppercase mb-2">Müüja kontakt</p>
                         <div className="flex items-center gap-3">
-                          <img src={product?.image} className="w-10 h-10 rounded object-cover bg-stone-100" />
+                          <img src={`https://i.pravatar.cc/150?u=${order.sellerId}`} className="w-8 h-8 rounded-full" />
                           <div>
-                            <p className="font-bold text-stone-800">{item.title}</p>
-                            <p className="text-xs text-stone-500">{item.qty} {product?.unit || 'tk'} x {item.price}€</p>
+                            <span className="block font-bold text-stone-700">{order.sellerName || 'Müüja'}</span>
+                            {sellerMapUrl && order.sellerLocation && (
+                              <a
+                                href={sellerMapUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sm text-emerald-700 hover:text-emerald-800 underline decoration-transparent hover:decoration-current"
+                              >
+                                {order.sellerLocation}
+                              </a>
+                            )}
                           </div>
                         </div>
-                        <p className="font-medium text-stone-900">{(item.qty * item.price).toFixed(2)}€</p>
                       </div>
-                    );
-                  })}
-                </div>
 
-                <div className="mt-8 pt-6 border-t border-stone-100">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className={`transition-all duration-300 ${openReviewOrderId === order.id ? '-translate-y-1' : 'translate-y-0'}`}>
-                      <p className="text-xs font-bold text-stone-400 uppercase mb-2">Müüja kontakt</p>
-                      <div className="flex items-center gap-3">
-                        <img src={`https://i.pravatar.cc/150?u=${order.sellerId}`} className="w-8 h-8 rounded-full" />
-                        <span className="font-bold text-stone-700">Mati Mets</span>
-                      </div>
+                      {(sellerMapUrl || buyerMapUrl) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {sellerMapUrl && order.sellerLocation && (
+                            <a
+                              href={sellerMapUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 hover:bg-emerald-100/70 transition-colors"
+                            >
+                              <span className="block text-[10px] font-bold uppercase tracking-widest text-emerald-700 mb-2">Pealevõtmine</span>
+                              <span className="block font-bold text-emerald-900">{order.sellerLocation}</span>
+                              <span className="block text-xs text-emerald-700 mt-2">Ava kaardirakenduses</span>
+                            </a>
+                          )}
+                          {buyerMapUrl && order.deliveryAddress && (
+                            <a
+                              href={buyerMapUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 hover:bg-stone-100 transition-colors"
+                            >
+                              <span className="block text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-2">Sinu sisestatud asukoht</span>
+                              <span className="block font-bold text-stone-900">{order.deliveryAddress}</span>
+                              <span className="block text-xs text-stone-500 mt-2">Ava kaardirakenduses</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {order.status === OrderStatus.COMPLETED && (
@@ -266,8 +323,8 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

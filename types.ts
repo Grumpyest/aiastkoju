@@ -39,6 +39,21 @@ export interface User {
   };
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface ResolvedLocation extends Coordinates {
+  label: string;
+  address?: string;
+}
+
+export interface MarketplaceLocationFilter {
+  location: ResolvedLocation | null;
+  radiusKm: number;
+}
+
 export interface Product {
   id: string;
   sellerId: string;
@@ -72,6 +87,7 @@ export interface Order {
   buyerPhone?: string;
   buyerEmail?: string;
   sellerId: string;
+  sellerName?: string;
   sellerLocation?: string;
   status: OrderStatus;
   total: number;

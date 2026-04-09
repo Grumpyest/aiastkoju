@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { User, UserRole, Language, Product, CartItem, Order, OrderStatus, Review } from './types';
+import { User, UserRole, Language, Product, CartItem, Order, OrderStatus, Review, MarketplaceLocationFilter } from './types';
 import { TRANSLATIONS, CATEGORIES } from './constants';
 import Navbar from './components/Navbar';
 import HomeView from './views/HomeView';
@@ -11,6 +11,8 @@ import OrdersView from './views/OrdersView';
 import ProfileView from './views/ProfileView';
 import CheckoutView from './views/CheckoutView';
 import { supabase } from './supabaseClient';
+
+const LOCATION_FILTER_STORAGE_KEY = 'marketplace-location-filter-v1';
 
 const mergeProductsWithReviewStats = (products: Product[], reviews: Review[]) => {
   const statsByProductId = new Map<string, { total: number; count: number }>();
@@ -60,6 +62,26 @@ const App: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [locationFilter, setLocationFilter] = useState<MarketplaceLocationFilter>(() => {
+    if (typeof window === 'undefined') {
+      return { location: null, radiusKm: 20 };
+    }
+
+    try {
+      const saved = window.localStorage.getItem(LOCATION_FILTER_STORAGE_KEY);
+      if (!saved) {
+        return { location: null, radiusKm: 20 };
+      }
+
+      const parsed = JSON.parse(saved) as MarketplaceLocationFilter;
+      return {
+        location: parsed?.location ?? null,
+        radiusKm: Number.isFinite(parsed?.radiusKm) ? parsed.radiusKm : 20,
+      };
+    } catch {
+      return { location: null, radiusKm: 20 };
+    }
+  });
 
   const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -220,32 +242,62 @@ const App: React.FC = () => {
         return;
       }
 
-      const mapped: Order[] = (orderRows || []).map((orderRow: any) => ({
+      const sellerIds = [...new Set((orderRows || []).map((orderRow: any) => String(orderRow.seller_id)).filter(Boolean))];
+      const sellersById = new Map<string, { full_name?: string | null; location?: string | null }>();
+
+      if (sellerIds.length > 0) {
+        const { data: sellerRows, error: sellerError } = await supabase
+          .from('profiles')
+          .select('id, full_name, location')
+          .in('id', sellerIds);
+
+        if (sellerError) {
+          console.error('Failed to load order seller profiles', sellerError);
+        } else {
+          for (const seller of sellerRows || []) {
+            sellersById.set(String(seller.id), seller);
+          }
+        }
+      }
+
+      const productById = new Map(products.map(product => [String(product.id), product]));
+      const itemsByOrderId = new Map<string, Order['items']>();
+
+      for (const itemRow of itemRows || []) {
+        const orderId = String(itemRow.order_id);
+        const product = productById.get(String(itemRow.product_id));
+        const existingItems = itemsByOrderId.get(orderId) ?? [];
+
+        existingItems.push({
+          productId: String(itemRow.product_id),
+          title: product?.title || 'Toode',
+          qty: Number(itemRow.quantity ?? 0),
+          price: Number(itemRow.unit_price ?? 0),
+        });
+
+        itemsByOrderId.set(orderId, existingItems);
+      }
+
+      const mapped: Order[] = (orderRows || []).map((orderRow: any) => {
+        const seller = sellersById.get(String(orderRow.seller_id));
+
+        return {
         id: String(orderRow.id),
         buyerId: String(orderRow.buyer_id),
         buyerName: orderRow.buyer_name || '',
         buyerPhone: orderRow.buyer_phone || '',
         buyerEmail: orderRow.buyer_email || '',
         sellerId: String(orderRow.seller_id),
-        sellerLocation: '',
+        sellerName: seller?.full_name || 'Müüja',
+        sellerLocation: seller?.location || '',
         status: orderRow.status as OrderStatus,
         total: Number(orderRow.total ?? 0),
         createdAt: String(orderRow.created_at ?? ''),
         deliveryAddress: orderRow.delivery_address || '',
         notes: orderRow.notes || '',
-        items: (itemRows || [])
-          .filter((itemRow: any) => String(itemRow.order_id) === String(orderRow.id))
-          .map((itemRow: any) => {
-            const product = products.find(p => String(p.id) === String(itemRow.product_id));
-
-            return {
-              productId: String(itemRow.product_id),
-              title: product?.title || 'Toode',
-              qty: Number(itemRow.quantity ?? 0),
-              price: Number(itemRow.unit_price ?? 0),
-            };
-          }),
-      }));
+        items: itemsByOrderId.get(String(orderRow.id)) ?? [],
+      };
+      });
 
       setOrders(mapped);
     };
@@ -326,6 +378,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCATION_FILTER_STORAGE_KEY, JSON.stringify(locationFilter));
+  }, [locationFilter]);
 
   const t = useMemo(() => TRANSLATIONS[language], [language]);
   const productsWithReviewStats = useMemo(() => mergeProductsWithReviewStats(products, reviews), [products, reviews]);
@@ -464,9 +520,12 @@ const App: React.FC = () => {
             onAddToCart={handleAddToCart}
             onBuyNow={handleBuyNow}
             t={t}
+            user={user}
             products={productsWithReviewStats}
             initialSearch={searchQuery}
             initialCategory={activeCategory}
+            locationFilter={locationFilter}
+            setLocationFilter={setLocationFilter}
           />
         );
       case 'dashboard':
