@@ -189,8 +189,16 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[140] bg-stone-200/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-white text-stone-900 rounded-[32px] shadow-2xl border border-stone-200 overflow-hidden">
+    <div className="fixed inset-0 z-[140] overflow-y-auto">
+      <button
+        type="button"
+        aria-label="Sulge asukoha valik"
+        onClick={onClose}
+        className="absolute inset-0 z-0 bg-stone-200/70 backdrop-blur-sm"
+      ></button>
+
+      <div className="relative z-10 min-h-full flex items-start md:items-center justify-center p-3 sm:p-4">
+        <div className="w-full max-w-3xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] bg-white text-stone-900 rounded-[28px] sm:rounded-[32px] shadow-2xl border border-stone-200 overflow-hidden flex flex-col my-3 sm:my-4">
         <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black">Määra asukoht</h2>
@@ -207,7 +215,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-5 bg-gradient-to-b from-white to-stone-50/60">
+        <div className="p-4 sm:p-6 space-y-5 bg-gradient-to-b from-white to-stone-50/60 overflow-y-auto overscroll-contain">
           <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_156px] gap-4">
             <form
               onSubmit={(event) => {
@@ -293,7 +301,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
               center={mapCenter}
               zoom={11}
               scrollWheelZoom
-              className="h-[380px] w-full"
+              className="h-[320px] sm:h-[380px] w-full"
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -355,6 +363,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
             Rakenda
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

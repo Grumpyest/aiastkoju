@@ -280,18 +280,22 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-80 flex-shrink-0">
           <div className="sticky top-24 space-y-8">
-            <div className="rounded-[28px] bg-white text-stone-900 p-5 border border-stone-200 shadow-sm">
+            <div className="rounded-[28px] bg-gradient-to-br from-white via-emerald-50/40 to-stone-50 text-stone-900 p-5 border border-stone-200 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-xl font-black leading-tight">Asukohapõhine otsing</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-2">Asukohapõhine otsing</p>
+                  <h3 className="text-[26px] leading-[1.05] font-black text-stone-900">Leia enda lähedal olevad aiatooted</h3>
+                  <p className="text-sm text-stone-500 mt-4 max-w-[24ch]">
+                    Sea punkt kaardil, sisesta raadius km-des ja filtreeri välja ainult sobivas kauguses müüjad.
+                  </p>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-lg text-emerald-600 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-stone-900 flex items-center justify-center text-lg text-emerald-300 shrink-0 shadow-sm">
                   <i className="fa-solid fa-map-location-dot"></i>
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400">Hetkel määratud asukoht</p>
+              <div className="mt-5 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400">Praegune filter</p>
                 {locationFilter.location ? (
                   <>
                     <p className="font-bold text-stone-900 line-clamp-2">{locationFilter.location.label}</p>
