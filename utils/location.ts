@@ -1,6 +1,7 @@
 import { Coordinates, ResolvedLocation } from '../types';
 
 const GEOCODE_CACHE_KEY = 'aiastkoju-geocode-cache-v1';
+const ESTONIA_COUNTRY_CODE = 'ee';
 
 type CachedLocationMap = Record<string, ResolvedLocation>;
 
@@ -97,6 +98,7 @@ export const geocodeLocation = async (query: string): Promise<ResolvedLocation |
   url.searchParams.set('format', 'jsonv2');
   url.searchParams.set('limit', '1');
   url.searchParams.set('addressdetails', '1');
+  url.searchParams.set('countrycodes', ESTONIA_COUNTRY_CODE);
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -129,6 +131,7 @@ export const searchLocationSuggestions = async (query: string, limit: number = 5
   url.searchParams.set('format', 'jsonv2');
   url.searchParams.set('limit', String(Math.max(1, Math.min(limit, 8))));
   url.searchParams.set('addressdetails', '1');
+  url.searchParams.set('countrycodes', ESTONIA_COUNTRY_CODE);
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -146,9 +149,29 @@ export const searchLocationSuggestions = async (query: string, limit: number = 5
     return [];
   }
 
-  return data
+  const parsedLocations = data
     .map(parseLocation)
     .filter((item): item is ResolvedLocation => item !== null);
+
+  const uniqueLocations: ResolvedLocation[] = [];
+  const seen = new Set<string>();
+
+  for (const location of parsedLocations) {
+    const dedupeKey = normalizeCacheKey(location.address || location.label);
+
+    if (seen.has(dedupeKey)) {
+      continue;
+    }
+
+    seen.add(dedupeKey);
+    uniqueLocations.push(location);
+
+    if (uniqueLocations.length >= limit) {
+      break;
+    }
+  }
+
+  return uniqueLocations;
 };
 
 export const reverseGeocodeLocation = async (coordinates: Coordinates): Promise<ResolvedLocation | null> => {
