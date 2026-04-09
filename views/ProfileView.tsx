@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../supabaseClient';
+import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
 
 interface ProfileViewProps {
   user: User;
@@ -283,8 +284,19 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Aednikule kohustuslik" />
                  </div>
                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-stone-400 uppercase">Asukoht (Maakond)</label>
-                    <input type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Aednikule kohustuslik" />
+                    <label className="text-[10px] font-bold text-stone-400 uppercase">Asukoht</label>
+                    <LocationAutocompleteInput
+                      type="text"
+                      value={formData.location}
+                      onChange={(value) => setFormData({ ...formData, location: value })}
+                      onSelectLocation={(location) => setFormData({ ...formData, location: location.address || location.label })}
+                      placeholder="Sisesta linn, aadress või piirkond"
+                      autoComplete="off"
+                      inputClassName="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                      dropdownClassName="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-20 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl"
+                      suggestionClassName="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors border-b border-stone-100 last:border-b-0"
+                      emptyStateClassName="px-4 py-3 text-sm text-stone-500 bg-white"
+                    />
                  </div>
               </div>
 

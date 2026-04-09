@@ -47,6 +47,7 @@ export interface Coordinates {
 export interface ResolvedLocation extends Coordinates {
   label: string;
   address?: string;
+  subtitle?: string;
 }
 
 export interface MarketplaceLocationFilter {

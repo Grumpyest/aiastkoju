@@ -2,6 +2,7 @@ import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { User, Product, CartItem, Order, OrderStatus, ResolvedLocation } from '../types';
 import { supabase } from '../supabaseClient';
 import { buildExternalMapUrl, calculateDistanceKm, formatDistanceKm, geocodeLocation } from '../utils/location';
+import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
 
 interface CheckoutViewProps {
   user: User;
@@ -480,13 +481,25 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Sinu asukoht</label>
-                  <input
+                  <LocationAutocompleteInput
                     required
                     type="text"
                     value={formData.address}
-                    onChange={e => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    onChange={(value) => {
+                      setFormData({ ...formData, address: value });
+                      setDistanceError('');
+                    }}
+                    onSelectLocation={(location) => {
+                      setFormData({ ...formData, address: location.address || location.label });
+                      setBuyerResolvedLocation(location);
+                      setDistanceError('');
+                    }}
                     placeholder="Sisesta linn, aadress või piirkond"
+                    autoComplete="off"
+                    inputClassName="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    dropdownClassName="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-20 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl"
+                    suggestionClassName="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors border-b border-stone-100 last:border-b-0"
+                    emptyStateClassName="px-4 py-3 text-sm text-stone-500 bg-white"
                   />
                   {buyerResolvedLocation && (
                     <p className="text-xs text-emerald-700 px-1">

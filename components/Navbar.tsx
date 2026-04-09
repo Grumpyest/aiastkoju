@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { User, UserRole, Language, CartItem, Product } from '../types';
 import { supabase } from '../supabaseClient';
+import LocationAutocompleteInput from './LocationAutocompleteInput';
 
 interface NavbarProps {
   currentView: string;
@@ -379,13 +380,18 @@ const handleRegister = async (e: React.FormEvent) => {
                     />
                     
                     <div className="space-y-2">
-                      <input 
+                      <LocationAutocompleteInput
                         required={regData.role === UserRole.GARDENER}
-                        type="text" 
-                        placeholder={regData.role === UserRole.GARDENER ? "Asukoht (nt: Tartumaa) (Kohustuslik)" : "Asukoht (nt: Tartumaa) (Valikuline)"}
-                        value={regData.location} 
-                        onChange={e => setRegData({...regData, location: e.target.value})} 
-                        className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" 
+                        type="text"
+                        value={regData.location}
+                        onChange={(value) => setRegData({ ...regData, location: value })}
+                        onSelectLocation={(location) => setRegData({ ...regData, location: location.address || location.label })}
+                        placeholder={regData.role === UserRole.GARDENER ? "Asukoht või aadress (Kohustuslik)" : "Asukoht või aadress (Valikuline)"}
+                        autoComplete="off"
+                        inputClassName="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500"
+                        dropdownClassName="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-20 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl"
+                        suggestionClassName="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors border-b border-stone-100 last:border-b-0"
+                        emptyStateClassName="px-4 py-3 text-sm text-stone-500 bg-white"
                       />
                       <p className="text-[10px] text-emerald-600 font-medium px-1 italic leading-tight">
                         * Määrates asukoha, saame pakkuda sulle asjakohasemat kogemust ja näidata lähemal asuvaid aednikke.

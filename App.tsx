@@ -383,6 +383,36 @@ const App: React.FC = () => {
     localStorage.setItem(LOCATION_FILTER_STORAGE_KEY, JSON.stringify(locationFilter));
   }, [locationFilter]);
 
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    setProducts(prev =>
+      prev.map(product =>
+        product.sellerId === user.id
+          ? {
+              ...product,
+              sellerName: user.name,
+              sellerLocation: user.location || '',
+            }
+          : product
+      )
+    );
+
+    setOrders(prev =>
+      prev.map(order =>
+        order.sellerId === user.id
+          ? {
+              ...order,
+              sellerName: user.name,
+              sellerLocation: user.location || '',
+            }
+          : order
+      )
+    );
+  }, [user]);
+
   const t = useMemo(() => TRANSLATIONS[language], [language]);
   const productsWithReviewStats = useMemo(() => mergeProductsWithReviewStats(products, reviews), [products, reviews]);
 

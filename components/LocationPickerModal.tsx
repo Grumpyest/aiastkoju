@@ -7,6 +7,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { MarketplaceLocationFilter, ResolvedLocation } from '../types';
 import { clampRadiusKm, geocodeLocation, getCurrentCoordinates, reverseGeocodeLocation } from '../utils/location';
+import LocationAutocompleteInput from './LocationAutocompleteInput';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -78,7 +79,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
       return;
     }
 
-    setSearchInput(value.location?.label || defaultQuery);
+    setSearchInput(value.location?.address || value.location?.label || defaultQuery);
     setRadiusInput(String(value.radiusKm || 20));
     setDraftLocation(value.location);
     setErrorMessage('');
@@ -114,10 +115,8 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
         return;
       }
 
-      setDraftLocation({
-        ...resolved,
-        label: query,
-      });
+      setDraftLocation(resolved);
+      setSearchInput(resolved.address || resolved.label);
     } catch (error: any) {
       setErrorMessage(error?.message || 'Asukoha otsimine ebaõnnestus.');
     } finally {
@@ -133,13 +132,14 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
       const coordinates = await getCurrentCoordinates();
       const resolved = await reverseGeocodeLocation(coordinates);
 
-      setDraftLocation(
-        resolved || {
-          ...coordinates,
-          label: 'Minu asukoht',
-          address: `${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)}`,
-        }
-      );
+      const nextLocation = resolved || {
+        ...coordinates,
+        label: 'Minu asukoht',
+        address: `${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)}`,
+      };
+
+      setDraftLocation(nextLocation);
+      setSearchInput(nextLocation.address || nextLocation.label);
     } catch (error: any) {
       setErrorMessage(error?.message || 'Seadme asukohta ei saanud kätte.');
     } finally {
@@ -174,13 +174,13 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
 
     try {
       const resolved = await reverseGeocodeLocation(coordinates);
+      const nextLocation = resolved || {
+        ...coordinates,
+        label: `${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)}`,
+      };
 
-      setDraftLocation(
-        resolved || {
-          ...coordinates,
-          label: `${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)}`,
-        }
-      );
+      setDraftLocation(nextLocation);
+      setSearchInput(nextLocation.address || nextLocation.label);
     } catch (error: any) {
       setErrorMessage(error?.message || 'Kaardilt valitud asukohta ei saanud tõlkida.');
     } finally {
@@ -189,45 +189,54 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[140] bg-stone-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-[#1f1f1f] text-white rounded-[28px] shadow-2xl border border-white/10 overflow-hidden">
-        <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
+    <div className="fixed inset-0 z-[140] bg-stone-950/45 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-3xl bg-white text-stone-900 rounded-[32px] shadow-2xl border border-stone-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black">Määra asukoht</h2>
-            <p className="text-sm text-white/65 mt-2 max-w-2xl">
+            <p className="text-sm text-stone-500 mt-2 max-w-2xl">
               Vali piirkond, kus soovid kuulutusi näha. Võid kasutada telefoni asukohta, sisestada linna või klõpsata kaardil.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white/70"
+            className="w-11 h-11 rounded-full bg-stone-100 hover:bg-stone-200 transition-colors flex items-center justify-center text-stone-500"
           >
             <i className="fa-solid fa-xmark text-xl"></i>
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px] gap-4">
+        <div className="p-6 space-y-5 bg-gradient-to-b from-white to-stone-50/60">
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_156px] gap-4">
             <form
               onSubmit={(event) => {
                 event.preventDefault();
                 resolveSearch();
               }}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 flex items-center gap-3"
+              className="relative rounded-2xl border border-stone-200 bg-white px-4 py-3 flex items-center gap-3 shadow-sm"
             >
-              <i className="fa-solid fa-location-dot text-white/60"></i>
-              <input
-                type="text"
+              <LocationAutocompleteInput
                 value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
+                onChange={setSearchInput}
+                onSelectLocation={(location) => {
+                  setDraftLocation(location);
+                  setSearchInput(location.address || location.label);
+                  setErrorMessage('');
+                }}
                 placeholder="Sisesta linn, aadress või piirkond"
-                className="bg-transparent flex-1 outline-none text-white placeholder:text-white/35"
+                startIcon={<i className="fa-solid fa-location-dot text-stone-400"></i>}
+                autoComplete="off"
+                containerClassName="flex-1"
+                inputClassName="w-full bg-transparent pl-8 pr-20 outline-none text-stone-900 placeholder:text-stone-400"
+                dropdownClassName="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl"
+                suggestionClassName="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors border-b border-stone-100 last:border-b-0"
+                emptyStateClassName="px-4 py-3 text-sm text-stone-500"
               />
               <button
                 type="submit"
                 disabled={isBusy}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-sm font-bold"
+                className="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-sm font-bold text-white"
               >
                 Otsi
               </button>
@@ -237,16 +246,16 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
               type="button"
               onClick={useCurrentLocation}
               disabled={isBusy}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 disabled:opacity-60 text-sm font-bold flex items-center justify-center gap-2"
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-3 hover:bg-emerald-50 disabled:opacity-60 text-sm font-bold flex items-center justify-center gap-2 shadow-sm"
             >
-              <i className="fa-solid fa-location-crosshairs"></i>
+              <i className="fa-solid fa-location-crosshairs text-emerald-600"></i>
               Minu asukoht
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)] gap-4 items-start">
-            <label className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 block">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">Raadius km</span>
+            <label className="rounded-2xl border border-stone-200 bg-white px-4 py-3 block shadow-sm">
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">Raadius km</span>
               <input
                 type="number"
                 min="1"
@@ -254,32 +263,32 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
                 inputMode="numeric"
                 value={radiusInput}
                 onChange={(event) => setRadiusInput(event.target.value)}
-                className="w-full bg-transparent outline-none text-lg font-black text-white"
+                className="w-full bg-transparent outline-none text-lg font-black text-stone-900"
               />
             </label>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 min-h-[76px]">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2">Valitud koht</span>
+            <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 min-h-[76px] shadow-sm">
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">Valitud koht</span>
               {draftLocation ? (
                 <>
-                  <p className="font-bold text-white">{draftLocation.label}</p>
+                  <p className="font-bold text-stone-900">{draftLocation.label}</p>
                   {draftLocation.address && (
-                    <p className="text-sm text-white/60 mt-1 line-clamp-2">{draftLocation.address}</p>
+                    <p className="text-sm text-stone-500 mt-1 line-clamp-2">{draftLocation.address}</p>
                   )}
                 </>
               ) : (
-                <p className="text-sm text-white/50">Asukohta pole veel valitud.</p>
+                <p className="text-sm text-stone-500">Asukohta pole veel valitud.</p>
               )}
             </div>
           </div>
 
           {errorMessage && (
-            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {errorMessage}
             </div>
           )}
 
-          <div className="rounded-[24px] overflow-hidden border border-white/10">
+          <div className="rounded-[24px] overflow-hidden border border-stone-200 shadow-sm">
             <MapContainer
               center={mapCenter}
               zoom={11}
@@ -297,14 +306,14 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
               {draftLocation && (
                 <>
                   <Marker position={[draftLocation.lat, draftLocation.lng]}>
-                    <Popup>{draftLocation.label}</Popup>
+                    <Popup>{draftLocation.address || draftLocation.label}</Popup>
                   </Marker>
                   <Circle
                     center={[draftLocation.lat, draftLocation.lng]}
                     radius={clampRadiusKm(Number(radiusInput.replace(',', '.'))) * 1000}
                     pathOptions={{
-                      color: '#60a5fa',
-                      fillColor: '#60a5fa',
+                      color: '#059669',
+                      fillColor: '#10b981',
                       fillOpacity: 0.12,
                     }}
                   />
@@ -324,16 +333,16 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
             </MapContainer>
           </div>
 
-          <div className="text-sm text-white/50">
+          <div className="text-sm text-stone-500">
             Klõpsa kaardil, kui tahad markerit käsitsi paigutada. Müüjate markerid kuvatakse kaardil siis, kui nende asukoht on lahendatud.
           </div>
         </div>
 
-        <div className="px-6 py-5 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-6 py-5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3 bg-white">
           <button
             type="button"
             onClick={clearSelection}
-            className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-sm font-bold"
+            className="px-4 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-sm font-bold text-stone-700"
           >
             Tühjenda filter
           </button>
@@ -341,7 +350,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
             type="button"
             onClick={applySelection}
             disabled={!draftLocation || isBusy}
-            className="px-6 py-3 rounded-2xl bg-[#1877f2] hover:bg-[#2c82f6] disabled:opacity-60 text-sm font-bold"
+            className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-sm font-bold text-white"
           >
             Rakenda
           </button>

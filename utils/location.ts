@@ -56,11 +56,20 @@ const parseLocation = (item: any): ResolvedLocation | null => {
     return null;
   }
 
+  const address = String(item?.display_name || item?.name || '');
+  const shortLabelFromAddress = address
+    .split(',')
+    .map((part: string) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(', ');
+
   return {
     lat,
     lng,
-    label: String(item?.display_name || item?.name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`),
-    address: String(item?.display_name || item?.name || ''),
+    label: String(item?.name || shortLabelFromAddress || `${lat.toFixed(5)}, ${lng.toFixed(5)}`),
+    address,
+    subtitle: String(item?.type || ''),
   };
 };
 
@@ -107,6 +116,39 @@ export const geocodeLocation = async (query: string): Promise<ResolvedLocation |
   }
 
   return parsed;
+};
+
+export const searchLocationSuggestions = async (query: string, limit: number = 5): Promise<ResolvedLocation[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const url = new URL('https://nominatim.openstreetmap.org/search');
+  url.searchParams.set('q', trimmed);
+  url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('limit', String(Math.max(1, Math.min(limit, 8))));
+  url.searchParams.set('addressdetails', '1');
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      'Accept-Language': 'et,en',
+    },
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map(parseLocation)
+    .filter((item): item is ResolvedLocation => item !== null);
 };
 
 export const reverseGeocodeLocation = async (coordinates: Coordinates): Promise<ResolvedLocation | null> => {
