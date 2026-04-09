@@ -280,31 +280,27 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-80 flex-shrink-0">
           <div className="sticky top-24 space-y-8">
-            <div className="rounded-[28px] bg-stone-950 text-white p-5 shadow-xl shadow-stone-900/10">
+            <div className="rounded-[28px] bg-white text-stone-900 p-5 border border-stone-200 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 mb-2">Asukohapõhine otsing</p>
-                  <h3 className="text-xl font-black leading-tight">Leia enda lähedal olevad aiatooted</h3>
-                  <p className="text-sm text-white/60 mt-3">
-                    Sea punkt kaardil, sisesta raadius km-des ja filtreeri välja ainult sobivas kauguses müüjad.
-                  </p>
+                  <h3 className="text-xl font-black leading-tight">Asukohapõhine otsing</h3>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-lg text-emerald-300 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-lg text-emerald-600 shrink-0">
                   <i className="fa-solid fa-map-location-dot"></i>
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">Praegune filter</p>
+              <div className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400">Hetkel määratud asukoht</p>
                 {locationFilter.location ? (
                   <>
-                    <p className="font-bold text-white line-clamp-2">{locationFilter.location.label}</p>
-                    <p className="text-sm text-white/60">
+                    <p className="font-bold text-stone-900 line-clamp-2">{locationFilter.location.label}</p>
+                    <p className="text-sm text-stone-500">
                       Raadius: {locationFilter.radiusKm} km
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm text-white/60">Asukoht pole veel valitud. Praegu näed kõiki müüjaid.</p>
+                  <p className="text-sm text-stone-500">Asukoht pole veel valitud. Praegu näed kõiki müüjaid.</p>
                 )}
               </div>
 
@@ -318,14 +314,14 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {locationFilter.location && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-xs font-bold">
-                    <i className="fa-solid fa-location-dot text-emerald-300"></i>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800">
+                    <i className="fa-solid fa-location-dot text-emerald-600"></i>
                     {locationFilter.radiusKm} km
                   </span>
                 )}
                 {isResolvingLocations && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-xs font-bold">
-                    <i className="fa-solid fa-spinner fa-spin text-emerald-300"></i>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700">
+                    <i className="fa-solid fa-spinner fa-spin text-emerald-600"></i>
                     Laadin müüjate kohti
                   </span>
                 )}

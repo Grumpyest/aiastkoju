@@ -189,13 +189,13 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[140] bg-stone-950/45 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[140] bg-stone-200/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-3xl bg-white text-stone-900 rounded-[32px] shadow-2xl border border-stone-200 overflow-hidden">
         <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black">Määra asukoht</h2>
             <p className="text-sm text-stone-500 mt-2 max-w-2xl">
-              Vali piirkond, kus soovid kuulutusi näha. Võid kasutada telefoni asukohta, sisestada linna või klõpsata kaardil.
+              Vali piirkond, kus soovid kuulutusi näha. Võid kasutada seadme asukohta, sisestada linna või klõpsata kaardil.
             </p>
           </div>
           <button
