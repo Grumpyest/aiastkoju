@@ -5,7 +5,7 @@ import { buildExternalMapUrl, calculateDistanceKm, formatDistanceKm, geocodeLoca
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
 
 interface CheckoutViewProps {
-  user: User;
+  user: User | null;
   cart: CartItem[];
   products: Product[];
   onIncreaseQty: (productId: string) => void;
@@ -22,8 +22,8 @@ const getDistanceState = (distanceKm?: number | null) => {
       iconClass: 'text-stone-400',
       textClass: 'text-stone-900',
       noteClass: 'text-stone-500',
-      title: 'Kaugust ei saanud veel arvutada',
-      note: 'Kontrollime kaugust kohe, kui asukoht on tuvastatud.',
+      title: 'Ostja asukoht on valikuline',
+      note: 'Lisa oma asukoht ainult siis, kui soovid müüja kaugust hinnata.',
     };
   }
 
@@ -70,10 +70,10 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
   onBack,
 }) => {
   const [formData, setFormData] = useState({
-    name: user.name || '',
-    email: user.email || '',
-    phone: user.phone || '',
-    address: user.location || '',
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    address: user?.location || '',
     notes: '',
   });
   const [buyerResolvedLocation, setBuyerResolvedLocation] = useState<ResolvedLocation | null>(null);
@@ -203,9 +203,19 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
       return;
     }
 
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
+      alert('Palun täida kõik tärniga märgitud kohustuslikud väljad.');
+      return;
+    }
+
     try {
       const sellers = Object.keys(itemsBySeller);
       const createdOrders: Order[] = [];
+      const buyerName = formData.name.trim();
+      const buyerEmail = formData.email.trim();
+      const buyerPhone = formData.phone.trim();
+      const deliveryAddress = formData.address.trim();
+      const notes = formData.notes.trim();
 
       for (const sellerId of sellers) {
         const sellerItems = itemsBySeller[sellerId];
@@ -214,15 +224,15 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
         const { data: orderRow, error: orderError } = await supabase
           .from('orders')
           .insert({
-            buyer_id: user.id,
+            buyer_id: user?.id ?? null,
             seller_id: sellerId,
             total: totalAmount,
             status: OrderStatus.NEW,
-            buyer_name: formData.name,
-            buyer_email: formData.email,
-            buyer_phone: formData.phone,
-            delivery_address: formData.address,
-            notes: formData.notes,
+            buyer_name: buyerName,
+            buyer_email: buyerEmail,
+            buyer_phone: buyerPhone,
+            delivery_address: deliveryAddress || null,
+            notes: notes || null,
           })
           .select('*')
           .single();
@@ -248,10 +258,10 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
 
         createdOrders.push({
           id: String(orderRow.id),
-          buyerId: user.id,
-          buyerName: formData.name,
-          buyerPhone: formData.phone,
-          buyerEmail: formData.email,
+          buyerId: user?.id ?? '',
+          buyerName,
+          buyerPhone,
+          buyerEmail,
           sellerId,
           sellerName: sellerItems[0].sellerName,
           sellerLocation: sellerItems[0].sellerLocation,
@@ -264,8 +274,8 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
             price: item.price,
           })),
           createdAt: String(orderRow.created_at ?? ''),
-          deliveryAddress: formData.address,
-          notes: formData.notes,
+          deliveryAddress,
+          notes,
         });
       }
 
@@ -447,9 +457,14 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
+                <i className="fa-solid fa-asterisk text-[10px] mr-2"></i>
+                Tärniga (*) märgitud väljad on kohustuslikud. Konto loomine ei ole tellimiseks vajalik.
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Täisnimi</label>
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Täisnimi <span className="text-emerald-600">*</span></label>
                   <input
                     required
                     type="text"
@@ -459,7 +474,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">E-post</label>
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">E-post <span className="text-emerald-600">*</span></label>
                   <input
                     required
                     type="email"
@@ -469,7 +484,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Telefon</label>
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Telefon <span className="text-emerald-600">*</span></label>
                   <input
                     required
                     type="tel"
@@ -480,9 +495,8 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Sinu asukoht</label>
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Sinu asukoht (valikuline)</label>
                   <LocationAutocompleteInput
-                    required
                     type="text"
                     value={formData.address}
                     onChange={(value) => {
@@ -510,7 +524,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Lisamärkused müüjale</label>
+                <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Lisamärkused müüjale (valikuline)</label>
                 <textarea
                   rows={3}
                   value={formData.notes}

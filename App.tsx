@@ -283,7 +283,7 @@ const App: React.FC = () => {
 
         return {
         id: String(orderRow.id),
-        buyerId: String(orderRow.buyer_id),
+        buyerId: orderRow.buyer_id ? String(orderRow.buyer_id) : '',
         buyerName: orderRow.buyer_name || '',
         buyerPhone: orderRow.buyer_phone || '',
         buyerEmail: orderRow.buyer_email || '',
@@ -478,11 +478,6 @@ const App: React.FC = () => {
   };
 
   const handleGoToCheckout = () => {
-    if (!user) {
-      setIsAuthModalOpen('login');
-      return;
-    }
-
     if (cart.length === 0) {
       showToast('Sinu ostukorv on tühi!', 'error');
       setCurrentView('catalog');
@@ -496,11 +491,6 @@ const App: React.FC = () => {
   const handleBuyNow = (productId: string, quantity: number = 1) => {
     handleAddToCart(productId, quantity);
 
-    if (!user) {
-      setIsAuthModalOpen('login');
-      return;
-    }
-
     setCurrentView('checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -508,7 +498,7 @@ const App: React.FC = () => {
   const completeOrder = (newOrders: Order[]) => {
     setOrders(prev => [...prev, ...newOrders]);
     setCart([]);
-    setCurrentView('orders');
+    setCurrentView(user ? 'orders' : 'catalog');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     showToast('Tellimus esitatud! Müüjad võtavad teiega ühendust.', 'success');
   };
@@ -645,7 +635,7 @@ const App: React.FC = () => {
           />
         );
       case 'checkout':
-        return user ? (
+        return (
           <CheckoutView
             user={user}
             cart={cart}
@@ -656,8 +646,6 @@ const App: React.FC = () => {
             onComplete={completeOrder}
             onBack={() => setCurrentView('catalog')}
           />
-        ) : (
-          <div className="py-20 text-center">Palun logi sisse, et kassasse pääseda.</div>
         );
       default:
         return (
