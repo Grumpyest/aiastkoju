@@ -55,6 +55,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [mobilePanelView, setMobilePanelView] = useState<'categories' | 'filters'>('categories');
   const [sellerLocationsById, setSellerLocationsById] = useState<Record<string, ResolvedLocation | null>>({});
   const [isResolvingLocations, setIsResolvingLocations] = useState(false);
   const [locationError, setLocationError] = useState('');
@@ -287,29 +288,31 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     ? `${locationFilter.radiusKm} km raadius`
     : 'Vali piirkond kaardilt';
 
-  const renderFilterSections = () => (
-    <>
-      <div>
-        <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Kategooriad</h3>
-        <div className="space-y-1">
+  const renderCategorySection = () => (
+    <div>
+      <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Kategooriad</h3>
+      <div className="space-y-1">
+        <button
+          onClick={() => setSelectedCat(null)}
+          className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${!selectedCat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
+        >
+          Kõik tooted
+        </button>
+        {CATEGORIES.map(cat => (
           <button
-            onClick={() => setSelectedCat(null)}
-            className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${!selectedCat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
+            key={cat}
+            onClick={() => setSelectedCat(cat)}
+            className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${selectedCat === cat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
           >
-            Kõik tooted
+            {cat}
           </button>
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCat(cat)}
-              className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${selectedCat === cat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
+    </div>
+  );
 
+  const renderFilterControls = () => (
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Hinnavahemik</h3>
@@ -412,7 +415,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             </button>
 
             <div className="rounded-[28px] bg-white border border-stone-200 shadow-sm p-5 space-y-6">
-              {renderFilterSections()}
+              {renderCategorySection()}
+              {renderFilterControls()}
 
               <button
                 type="button"
@@ -427,33 +431,14 @@ const CatalogView: React.FC<CatalogViewProps> = ({
         </aside>
 
         <main className="flex-grow min-w-0">
-          <div className="md:hidden grid grid-cols-2 gap-3 mb-4">
-            <button
-              type="button"
-              onClick={() => setIsMobileFiltersOpen(true)}
-              className="rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/60 transition-all text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-700">
-                  <i className="fa-solid fa-sliders"></i>
-                </div>
-                <div className="min-w-0">
-                  <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-[0.22em] mb-1">Kategooriad ja filtrid</span>
-                  <span className="block font-bold text-stone-900 truncate">
-                    {selectedCat || (activeFilterCount > 0 ? `${activeFilterCount} aktiivset` : 'Ava valikud')}
-                  </span>
-                  <span className="block text-xs text-stone-500 mt-1">Puuduta, et filtreid hallata</span>
-                </div>
-              </div>
-            </button>
-
+          <div className="md:hidden mb-4 space-y-3">
             <button
               type="button"
               onClick={() => setIsLocationModalOpen(true)}
-              className="rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/60 transition-all text-left"
+              className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/60 transition-all text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
                   <i className="fa-solid fa-map-location-dot"></i>
                 </div>
                 <div className="min-w-0">
@@ -463,6 +448,45 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                 </div>
               </div>
             </button>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_56px_auto] gap-2 items-stretch">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobilePanelView('categories');
+                  setIsMobileFiltersOpen(true);
+                }}
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/60 transition-all text-left"
+              >
+                <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-[0.22em] mb-1">Kategooria</span>
+                <span className="block font-bold text-stone-900 truncate">{selectedCat || 'Kõik tooted'}</span>
+              </button>
+
+              <button
+                type="button"
+                aria-label="Ava filtrid"
+                onClick={() => {
+                  setMobilePanelView('filters');
+                  setIsMobileFiltersOpen(true);
+                }}
+                className="h-14 w-14 rounded-2xl border border-stone-200 bg-white shadow-sm text-stone-700 hover:border-emerald-300 hover:bg-emerald-50/60 transition-all flex items-center justify-center relative"
+              >
+                <i className="fa-solid fa-sliders"></i>
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="h-14 rounded-2xl border border-stone-200 bg-stone-50 px-3 text-xs font-black text-stone-700 shadow-sm hover:border-emerald-300 hover:bg-emerald-50 transition-all whitespace-nowrap"
+              >
+                Lähtesta
+              </button>
+            </div>
           </div>
 
           <div className="mb-6 relative">
@@ -645,7 +669,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">Filtrid</p>
-                <h3 className="text-lg font-black text-stone-900">Kategooriad ja valikud</h3>
+                <h3 className="text-lg font-black text-stone-900">
+                  {mobilePanelView === 'categories' ? 'Kategooriad' : 'Filtrid'}
+                </h3>
               </div>
               <button
                 type="button"
@@ -656,19 +682,36 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               </button>
             </div>
 
-            <div className="overflow-y-auto p-5 space-y-6">
-              {renderFilterSections()}
-            </div>
-
-            <div className="border-t border-stone-100 bg-white p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2 border-b border-stone-100 bg-stone-50/70 p-4">
               <button
                 type="button"
-                onClick={resetFilters}
-                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-4 py-4 text-base font-black text-emerald-900"
+                onClick={() => setMobilePanelView('categories')}
+                className={`rounded-2xl px-4 py-3 text-sm font-black transition-all ${
+                  mobilePanelView === 'categories'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-white text-stone-600 border border-stone-200'
+                }`}
               >
-                <i className="fa-solid fa-rotate-left"></i>
-                Lähtesta filtrid
+                Kategooriad
               </button>
+              <button
+                type="button"
+                onClick={() => setMobilePanelView('filters')}
+                className={`rounded-2xl px-4 py-3 text-sm font-black transition-all ${
+                  mobilePanelView === 'filters'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-white text-stone-600 border border-stone-200'
+                }`}
+              >
+                Filtrid
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-5 space-y-6">
+              {mobilePanelView === 'categories' ? renderCategorySection() : renderFilterControls()}
+            </div>
+
+            <div className="border-t border-stone-100 bg-white p-4">
               <button
                 type="button"
                 onClick={() => setIsMobileFiltersOpen(false)}
