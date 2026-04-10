@@ -81,22 +81,38 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
   e.preventDefault();
 
   try {
+    const nextName = formData.name.trim();
+    const nextPhone = formData.phone.trim();
+    const nextLocation = formData.location.trim();
+
     const { error } = await supabase
       .from('profiles')
       .update({
-        full_name: formData.name,
-        phone: formData.phone || null,
-        location: formData.location || null,
+        full_name: nextName,
+        phone: nextPhone || null,
+        location: nextLocation || null,
       })
       .eq('id', user.id);
 
     if (error) throw error;
 
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: {
+        full_name: nextName,
+        phone: nextPhone || null,
+        location: nextLocation || null,
+      },
+    });
+
+    if (metadataError) {
+      console.warn('Auth metadata location update failed', metadataError);
+    }
+
     setUser({
       ...user,
-      name: formData.name,
-      phone: formData.phone || undefined,
-      location: formData.location || undefined,
+      name: nextName,
+      phone: nextPhone || undefined,
+      location: nextLocation || undefined,
       avatar: formData.avatar || undefined,
     });
 
@@ -133,7 +149,10 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     }
 
     // kui ostja -> müüjaks
-    if (!formData.phone.trim() || !formData.location.trim()) {
+    const nextPhone = formData.phone.trim();
+    const nextLocation = formData.location.trim();
+
+    if (!nextPhone || !nextLocation) {
       onNotify?.(
         'Aedniku staatuse aktiveerimiseks pead esmalt täitma telefoni ja asukoha!',
         'error'
@@ -150,12 +169,24 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       .from('profiles')
       .update({
         is_seller: true,
-        phone: formData.phone,
-        location: formData.location,
+        phone: nextPhone,
+        location: nextLocation,
       })
       .eq('id', user.id);
 
     if (error) throw error;
+
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: {
+        phone: nextPhone,
+        location: nextLocation,
+        is_seller: true,
+      },
+    });
+
+    if (metadataError) {
+      console.warn('Auth metadata location update failed', metadataError);
+    }
 
     await supabase
       .from('products')
@@ -165,8 +196,8 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setUser({
       ...user,
       role: UserRole.GARDENER,
-      phone: formData.phone,
-      location: formData.location,
+      phone: nextPhone,
+      location: nextLocation,
     });
 
     onNotify?.('Oled nüüd Aednik! Päisesse lisandus "Töölaud".', 'success');

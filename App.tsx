@@ -165,12 +165,28 @@ const App: React.FC = () => {
         return;
       }
 
+      const metadataLocation = typeof supabaseUser.user_metadata?.location === 'string'
+        ? supabaseUser.user_metadata.location.trim()
+        : '';
+      const nextLocation = profile.location || metadataLocation || '';
+
+      if (!profile.location && metadataLocation) {
+        const { error: locationUpdateError } = await supabase
+          .from('profiles')
+          .update({ location: metadataLocation })
+          .eq('id', supabaseUser.id);
+
+        if (locationUpdateError) {
+          console.warn('Profile location backfill failed', locationUpdateError);
+        }
+      }
+
       setUser({
         id: profile.id,
         name: profile.full_name || (profile.email?.split('@')[0] ?? 'Kasutaja'),
         email: profile.email || supabaseUser.email || '',
         phone: profile.phone || undefined,
-        location: profile.location || undefined,
+        location: nextLocation || undefined,
         role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
         avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`,
       });
