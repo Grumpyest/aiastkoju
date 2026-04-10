@@ -457,7 +457,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 text-sm font-bold text-stone-900">
+              <div className="text-sm font-bold text-stone-900">
                 Tärniga (*) märgitud väljad on kohustuslikud.
               </div>
 
