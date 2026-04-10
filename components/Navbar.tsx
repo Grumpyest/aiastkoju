@@ -115,6 +115,7 @@ const handleRegister = async (e: React.FormEvent) => {
         full_name: regData.name,
         username: regData.name,
         phone: regData.phone,
+        location: regData.location,
         is_seller: regData.role === UserRole.GARDENER,
       }
     }
@@ -135,7 +136,7 @@ const handleRegister = async (e: React.FormEvent) => {
   // Kui session olemas, kontrolli profiles (ja kui pole, signOut)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id,email,full_name,phone,is_seller')
+    .select('id,email,full_name,phone,is_seller,location')
     .eq('id', data.user!.id)
     .maybeSingle();
 
@@ -145,12 +146,26 @@ const handleRegister = async (e: React.FormEvent) => {
     return;
   }
 
+  if (regData.phone || regData.location) {
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({
+        phone: regData.phone || null,
+        location: regData.location || null,
+      })
+      .eq('id', data.user!.id);
+
+    if (profileUpdateError) {
+      onNotify?.('Konto loodi, aga asukoha salvestamine ebaõnnestus. Salvesta see hiljem profiilis uuesti.', 'error');
+    }
+  }
+
   setUser({
     id: profile.id,
     name: profile.full_name || regData.email.split('@')[0] || 'Kasutaja',
     email: profile.email || regData.email,
     phone: profile.phone || undefined,
-    location: regData.location || undefined,
+    location: regData.location || profile.location || undefined,
     role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
     avatar: `https://i.pravatar.cc/150?u=${profile.id}`,
   });

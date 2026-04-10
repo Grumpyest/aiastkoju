@@ -27,27 +27,41 @@ const loadSellerProfileSummaries = async (sellerIds: string[]) => {
     return sellersById;
   }
 
+  const addSellerRows = (rows: SellerProfileSummary[] | null) => {
+    for (const seller of rows || []) {
+      sellersById.set(String(seller.id), seller);
+    }
+  };
+
   const fetchFrom = (tableName: 'public_seller_profiles' | 'profiles') =>
     supabase
       .from(tableName)
       .select('id, full_name, location')
       .in('id', sellerIds);
 
-  let { data, error } = await fetchFrom('public_seller_profiles');
+  const publicProfiles = await fetchFrom('public_seller_profiles');
 
-  if (error) {
-    const fallback = await fetchFrom('profiles');
-    data = fallback.data;
-    error = fallback.error;
+  if (!publicProfiles.error) {
+    addSellerRows(publicProfiles.data);
   }
 
-  if (error) {
-    console.error('Failed to load seller profiles', error);
-    return sellersById;
+  const missingSellerIds = sellerIds.filter(sellerId => !sellersById.has(sellerId));
+
+  if (missingSellerIds.length > 0) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, location')
+      .in('id', missingSellerIds);
+
+    if (!error) {
+      addSellerRows(data);
+    } else if (publicProfiles.error) {
+      console.error('Failed to load seller profiles', publicProfiles.error, error);
+    }
   }
 
-  for (const seller of data || []) {
-    sellersById.set(String(seller.id), seller);
+  if (publicProfiles.error && sellersById.size === 0) {
+    console.error('Failed to load public seller profiles', publicProfiles.error);
   }
 
   return sellersById;
