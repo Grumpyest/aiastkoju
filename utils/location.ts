@@ -269,30 +269,6 @@ export const buildExternalMapUrl = (options: {
   const query = coordinates
     ? `${coordinates.lat},${coordinates.lng}`
     : fallbackQuery || label || '';
-  const encodedLabel = encodeURIComponent(label || fallbackQuery || query);
-  const encodedQuery = encodeURIComponent(fallbackQuery || label || query);
-
-  if (typeof navigator !== 'undefined') {
-    const userAgent = navigator.userAgent || '';
-    const isAndroid = /Android/i.test(userAgent);
-    const isAppleDevice = /iPhone|iPad|iPod|Macintosh/i.test(userAgent);
-
-    if (isAndroid) {
-      if (coordinates) {
-        return `geo:${coordinates.lat},${coordinates.lng}?q=${coordinates.lat},${coordinates.lng}(${encodedLabel})`;
-      }
-
-      return `geo:0,0?q=${encodedQuery}`;
-    }
-
-    if (isAppleDevice) {
-      if (coordinates) {
-        return `https://maps.apple.com/?ll=${coordinates.lat},${coordinates.lng}&q=${encodedLabel}`;
-      }
-
-      return `https://maps.apple.com/?q=${encodedQuery}`;
-    }
-  }
 
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 };
