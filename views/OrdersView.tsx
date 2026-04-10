@@ -148,13 +148,6 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                   fallbackQuery: order.sellerLocation,
                 })
               : null;
-            const buyerMapUrl = order.deliveryAddress
-              ? buildExternalMapUrl({
-                  label: order.deliveryAddress,
-                  fallbackQuery: order.deliveryAddress,
-                })
-              : null;
-
             return (
               <div key={order.id} className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-stone-100 flex flex-wrap justify-between items-center gap-4 bg-stone-50/50">
@@ -210,32 +203,18 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                         </div>
                       </div>
 
-                      {(sellerMapUrl || buyerMapUrl) && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {sellerMapUrl && order.sellerLocation && (
-                            <a
-                              href={sellerMapUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 hover:bg-emerald-100/70 transition-colors"
-                            >
-                              <span className="block text-[10px] font-bold uppercase tracking-widest text-emerald-700 mb-2">Pealevõtmine</span>
-                              <span className="block font-bold text-emerald-900">{order.sellerLocation}</span>
-                              <span className="block text-xs text-emerald-700 mt-2">Ava kaardirakenduses</span>
-                            </a>
-                          )}
-                          {buyerMapUrl && order.deliveryAddress && (
-                            <a
-                              href={buyerMapUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 hover:bg-stone-100 transition-colors"
-                            >
-                              <span className="block text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-2">Sinu sisestatud asukoht</span>
-                              <span className="block font-bold text-stone-900">{order.deliveryAddress}</span>
-                              <span className="block text-xs text-stone-500 mt-2">Ava kaardirakenduses</span>
-                            </a>
-                          )}
+                      {sellerMapUrl && order.sellerLocation && (
+                        <div className="grid grid-cols-1 gap-3">
+                          <a
+                            href={sellerMapUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 hover:bg-emerald-100/70 transition-colors"
+                          >
+                            <span className="block text-[10px] font-bold uppercase tracking-widest text-emerald-700 mb-2">Pealevõtmine</span>
+                            <span className="block font-bold text-emerald-900">{order.sellerLocation}</span>
+                            <span className="block text-xs text-emerald-700 mt-2">Ava kaardirakenduses</span>
+                          </a>
                         </div>
                       )}
                     </div>

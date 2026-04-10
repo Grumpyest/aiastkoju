@@ -449,7 +449,18 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               </div>
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_56px_auto] gap-2 items-stretch">
+              <div className="relative min-w-0">
+                <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"></i>
+                <input
+                  type="text"
+                  placeholder="Otsi"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-14 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-3 text-sm font-bold shadow-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
               <button
                 type="button"
                 aria-label="Ava filtrid"
@@ -477,7 +488,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             </div>
           </div>
 
-          <div className="mb-6 relative">
+          <div className="hidden md:block mb-6 relative">
             <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"></i>
             <input
               type="text"
@@ -695,7 +706,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               </button>
             </div>
 
-            <div className="overflow-y-auto p-5 space-y-6 min-h-[300px]">
+            <div className="h-[300px] overflow-y-auto p-5 space-y-6">
               {mobilePanelView === 'categories' ? renderCategorySection() : renderFilterControls()}
             </div>
 

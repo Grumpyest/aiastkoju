@@ -727,7 +727,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   </div>
                 </div>
               </div>
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
                 <div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-4">Sisu:</p>
                   <div className="space-y-3">
@@ -739,7 +739,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                     ))}
                   </div>
                 </div>
-                <div className="space-y-6">
+                <div>
                   <div>
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-4">Ostja:</p>
                     <div className="flex items-center gap-3">
@@ -750,18 +750,14 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-stone-50 rounded-2xl p-4 space-y-3">
-                    <div>
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Tarneaadress</p>
-                      <p className="text-sm font-medium text-stone-700">{order.deliveryAddress || 'Aadress puudub'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Ostja soovid</p>
-                      <p className="text-sm font-medium text-stone-700">{order.notes || 'Lisamarkusi ei lisatud.'}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2 pt-4">
+                </div>
+
+                <div className="md:col-span-2 bg-stone-50 rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Ostja soovid</p>
+                  <p className="text-sm font-medium text-stone-700 leading-relaxed">{order.notes || 'Lisamärkusi ei lisatud.'}</p>
+                </div>
+
+                <div className="md:col-span-2 flex gap-2 pt-2">
                     {order.status === OrderStatus.NEW && (
                       <button 
                         onClick={() => handleStatusUpdate(order.id, OrderStatus.CONFIRMED)}
@@ -788,7 +784,6 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                     )}
                   </div>
                 </div>
-              </div>
             </div>
           ))}
         </div>
