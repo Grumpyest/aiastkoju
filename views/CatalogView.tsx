@@ -661,10 +661,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             type="button"
             aria-label="Sulge filtrid"
             onClick={() => setIsMobileFiltersOpen(false)}
-            className="absolute inset-0 bg-stone-900/35 backdrop-blur-sm"
+            className="fixed inset-0 bg-stone-900/35 backdrop-blur-sm"
           ></button>
 
-          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[85vh] overflow-hidden rounded-t-[32px] border-t border-stone-200 bg-white shadow-2xl flex flex-col">
+          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[85vh] overflow-y-auto rounded-t-[32px] border-t border-stone-200 bg-white shadow-2xl overscroll-contain">
             <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">Filtrid</p>
@@ -706,7 +706,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               </button>
             </div>
 
-            <div className="h-[300px] overflow-y-auto p-5 space-y-6">
+            <div className="min-h-[300px] p-5 space-y-6">
               {mobilePanelView === 'categories' ? renderCategorySection() : renderFilterControls()}
             </div>
 
