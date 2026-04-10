@@ -14,6 +14,45 @@ import { supabase } from './supabaseClient';
 
 const LOCATION_FILTER_STORAGE_KEY = 'marketplace-location-filter-v1';
 
+type SellerProfileSummary = {
+  id: string;
+  full_name?: string | null;
+  location?: string | null;
+};
+
+const loadSellerProfileSummaries = async (sellerIds: string[]) => {
+  const sellersById = new Map<string, SellerProfileSummary>();
+
+  if (sellerIds.length === 0) {
+    return sellersById;
+  }
+
+  const fetchFrom = (tableName: 'public_seller_profiles' | 'profiles') =>
+    supabase
+      .from(tableName)
+      .select('id, full_name, location')
+      .in('id', sellerIds);
+
+  let { data, error } = await fetchFrom('public_seller_profiles');
+
+  if (error) {
+    const fallback = await fetchFrom('profiles');
+    data = fallback.data;
+    error = fallback.error;
+  }
+
+  if (error) {
+    console.error('Failed to load seller profiles', error);
+    return sellersById;
+  }
+
+  for (const seller of data || []) {
+    sellersById.set(String(seller.id), seller);
+  }
+
+  return sellersById;
+};
+
 const mergeProductsWithReviewStats = (products: Product[], reviews: Review[]) => {
   const statsByProductId = new Map<string, { total: number; count: number }>();
 
@@ -169,22 +208,7 @@ const App: React.FC = () => {
       }
 
       const sellerIds = [...new Set((data || []).map((product: any) => String(product.seller_id)).filter(Boolean))];
-      const sellersById = new Map<string, { full_name?: string | null; location?: string | null }>();
-
-      if (sellerIds.length > 0) {
-        const { data: sellerRows, error: sellerError } = await supabase
-          .from('profiles')
-          .select('id, full_name, location')
-          .in('id', sellerIds);
-
-        if (sellerError) {
-          console.error('Failed to load seller profiles', sellerError);
-        } else {
-          for (const seller of sellerRows || []) {
-            sellersById.set(String(seller.id), seller);
-          }
-        }
-      }
+      const sellersById = await loadSellerProfileSummaries(sellerIds);
 
       const mapped: Product[] = (data || []).map((productRow: any) => {
         const seller = sellersById.get(String(productRow.seller_id));
@@ -243,22 +267,7 @@ const App: React.FC = () => {
       }
 
       const sellerIds = [...new Set((orderRows || []).map((orderRow: any) => String(orderRow.seller_id)).filter(Boolean))];
-      const sellersById = new Map<string, { full_name?: string | null; location?: string | null }>();
-
-      if (sellerIds.length > 0) {
-        const { data: sellerRows, error: sellerError } = await supabase
-          .from('profiles')
-          .select('id, full_name, location')
-          .in('id', sellerIds);
-
-        if (sellerError) {
-          console.error('Failed to load order seller profiles', sellerError);
-        } else {
-          for (const seller of sellerRows || []) {
-            sellersById.set(String(seller.id), seller);
-          }
-        }
-      }
+      const sellersById = await loadSellerProfileSummaries(sellerIds);
 
       const productById = new Map(products.map(product => [String(product.id), product]));
       const itemsByOrderId = new Map<string, Order['items']>();
@@ -302,10 +311,12 @@ const App: React.FC = () => {
       setOrders(mapped);
     };
 
-    if (products.length > 0) {
+    if (products.length > 0 && user) {
       loadOrders();
+    } else {
+      setOrders([]);
     }
-  }, [products]);
+  }, [products, user]);
 
   useEffect(() => {
     const loadReviews = async () => {

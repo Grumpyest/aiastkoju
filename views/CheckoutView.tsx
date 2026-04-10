@@ -59,6 +59,18 @@ const getDistanceState = (distanceKm?: number | null) => {
   };
 };
 
+const createClientUuid = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+    const random = Math.random() * 16 | 0;
+    const value = char === 'x' ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
+};
+
 const CheckoutView: React.FC<CheckoutViewProps> = ({
   user,
   cart,
@@ -220,10 +232,13 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
       for (const sellerId of sellers) {
         const sellerItems = itemsBySeller[sellerId];
         const totalAmount = sellerItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+        const orderId = createClientUuid();
+        const createdAt = new Date().toISOString();
 
-        const { data: orderRow, error: orderError } = await supabase
+        const { error: orderError } = await supabase
           .from('orders')
           .insert({
+            id: orderId,
             buyer_id: user?.id ?? null,
             seller_id: sellerId,
             total: totalAmount,
@@ -233,14 +248,12 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
             buyer_phone: buyerPhone,
             delivery_address: deliveryAddress || null,
             notes: notes || null,
-          })
-          .select('*')
-          .single();
+          });
 
         if (orderError) throw orderError;
 
         const itemsPayload = sellerItems.map(item => ({
-          order_id: orderRow.id,
+          order_id: orderId,
           product_id: item.productId,
           seller_id: item.sellerId,
           quantity: item.quantity,
@@ -252,12 +265,12 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
           .insert(itemsPayload);
 
         if (itemError) {
-          await supabase.from('orders').delete().eq('id', orderRow.id);
+          await supabase.from('orders').delete().eq('id', orderId);
           throw itemError;
         }
 
         createdOrders.push({
-          id: String(orderRow.id),
+          id: orderId,
           buyerId: user?.id ?? '',
           buyerName,
           buyerPhone,
@@ -273,7 +286,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
             qty: item.quantity,
             price: item.price,
           })),
-          createdAt: String(orderRow.created_at ?? ''),
+          createdAt,
           deliveryAddress,
           notes,
         });
