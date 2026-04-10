@@ -374,6 +374,15 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           <div className="sticky top-24 space-y-6">
             <button
               type="button"
+              onClick={resetFilters}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-stone-500 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+            >
+              <i className="fa-solid fa-rotate-left text-emerald-600"></i>
+              Lähtesta filtrid
+            </button>
+
+            <button
+              type="button"
               onClick={() => setIsLocationModalOpen(true)}
               className="w-full rounded-[28px] bg-gradient-to-br from-white via-emerald-50/40 to-stone-50 text-left text-stone-900 p-5 border border-stone-200 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
             >
@@ -389,7 +398,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                       : 'Ava kaart ja määra piirkond, kus soovid kohalikke müüjaid näha.'}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-stone-900 flex items-center justify-center text-lg text-emerald-300 shrink-0 shadow-sm">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center text-lg text-emerald-600 shrink-0">
                   <i className="fa-solid fa-map-location-dot"></i>
                 </div>
               </div>
@@ -417,15 +426,6 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             <div className="rounded-[28px] bg-white border border-stone-200 shadow-sm p-5 space-y-6">
               {renderCategorySection()}
               {renderFilterControls()}
-
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-sm font-black text-stone-800 transition-all hover:border-emerald-300 hover:bg-emerald-50"
-              >
-                <i className="fa-solid fa-rotate-left text-emerald-600"></i>
-                Lähtesta filtrid
-              </button>
             </div>
           </div>
         </aside>
@@ -449,19 +449,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               </div>
             </button>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_56px_auto] gap-2 items-stretch">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobilePanelView('categories');
-                  setIsMobileFiltersOpen(true);
-                }}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/60 transition-all text-left"
-              >
-                <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-[0.22em] mb-1">Kategooria</span>
-                <span className="block font-bold text-stone-900 truncate">{selectedCat || 'Kõik tooted'}</span>
-              </button>
-
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 aria-label="Ava filtrid"
@@ -482,7 +470,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               <button
                 type="button"
                 onClick={resetFilters}
-                className="h-14 rounded-2xl border border-stone-200 bg-stone-50 px-3 text-xs font-black text-stone-700 shadow-sm hover:border-emerald-300 hover:bg-emerald-50 transition-all whitespace-nowrap"
+                className="h-14 rounded-2xl border border-stone-200 bg-stone-50 px-4 text-xs font-black text-stone-700 shadow-sm hover:border-emerald-300 hover:bg-emerald-50 transition-all whitespace-nowrap"
               >
                 Lähtesta
               </button>
@@ -707,7 +695,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               </button>
             </div>
 
-            <div className="overflow-y-auto p-5 space-y-6">
+            <div className="overflow-y-auto p-5 space-y-6 min-h-[300px]">
               {mobilePanelView === 'categories' ? renderCategorySection() : renderFilterControls()}
             </div>
 
