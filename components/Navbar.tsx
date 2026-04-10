@@ -255,12 +255,12 @@ const handleRegister = async (e: React.FormEvent) => {
               {isCartOpen && (
                 <>
                   <div className="fixed inset-0 z-[45] bg-transparent" onClick={() => setIsCartOpen(false)}></div>
-                  <div className="absolute right-0 top-full z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] sm:w-80 bg-white shadow-2xl rounded-2xl border border-stone-100 overflow-hidden animate-fade-in">
+                  <div className="fixed left-3 right-3 top-24 z-[60] max-h-[calc(100svh-7rem)] bg-white shadow-2xl rounded-[28px] border border-stone-100 overflow-hidden animate-fade-in flex flex-col md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-80 md:max-h-none md:rounded-2xl">
                     <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
                       <h3 className="font-bold text-stone-900 text-xs uppercase tracking-widest">Ostukorv</h3>
                       <button onClick={() => setIsCartOpen(false)} className="text-stone-400 hover:text-stone-600"><i className="fa-solid fa-xmark"></i></button>
                     </div>
-                    <div className="max-h-80 overflow-y-auto p-4 space-y-4">
+                    <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 md:max-h-80 md:flex-none">
                       {cart.length === 0 ? <p className="text-center text-stone-500 py-8 italic text-sm">Ostukorv on tühi</p> : cart.map(item => {
                         const product = products.find(p => p.id === item.productId);
                         const minQty = Math.max(1, Number(product?.minOrderQty ?? 1));
@@ -294,7 +294,7 @@ const handleRegister = async (e: React.FormEvent) => {
                     </div>
                     {cart.length > 0 && (
                       <div className="p-4 bg-stone-50 border-t border-stone-100">
-                        <button onClick={() => { onCheckout(); setIsCartOpen(false); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Vormista tellimus ({cartTotal.toFixed(2)}€)</button>
+                        <button onClick={() => { onCheckout(); setIsCartOpen(false); }} className="w-full bg-emerald-600 text-white px-4 py-3 rounded-xl text-sm sm:text-base font-bold leading-tight">Vormista tellimus ({cartTotal.toFixed(2)}€)</button>
                       </div>
                     )}
                   </div>
