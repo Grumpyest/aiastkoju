@@ -54,6 +54,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [maxPriceInput, setMaxPriceInput] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [sellerLocationsById, setSellerLocationsById] = useState<Record<string, ResolvedLocation | null>>({});
   const [isResolvingLocations, setIsResolvingLocations] = useState(false);
   const [locationError, setLocationError] = useState('');
@@ -275,18 +276,114 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     });
   };
 
+  const activeFilterCount = [
+    Boolean(selectedCat),
+    Boolean(minPriceInput.trim() || maxPriceInput.trim()),
+    sortBy !== 'newest',
+  ].filter(Boolean).length;
+
+  const locationButtonLabel = locationFilter.location?.label || 'Asukohapõhine otsing';
+  const locationButtonHelper = locationFilter.location
+    ? `${locationFilter.radiusKm} km raadius`
+    : 'Vali piirkond kaardilt';
+
+  const renderFilterSections = () => (
+    <>
+      <div>
+        <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Kategooriad</h3>
+        <div className="space-y-1">
+          <button
+            onClick={() => setSelectedCat(null)}
+            className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${!selectedCat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
+          >
+            Kõik tooted
+          </button>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCat(cat)}
+              className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${selectedCat === cat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Hinnavahemik</h3>
+          <span className="text-[11px] text-stone-400 font-bold">
+            {priceBounds.max > 0 ? `${priceBounds.min.toFixed(2)}€ - ${priceBounds.max.toFixed(2)}€` : 'Puudub'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="space-y-2">
+            <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">Alates</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={minPriceInput}
+              onChange={(e) => setMinPriceInput(e.target.value)}
+              placeholder={priceBounds.min > 0 ? priceBounds.min.toFixed(2) : '0.00'}
+              className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">Kuni</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={maxPriceInput}
+              onChange={(e) => setMaxPriceInput(e.target.value)}
+              placeholder={priceBounds.max > 0 ? priceBounds.max.toFixed(2) : '0.00'}
+              className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Sorteeri</h3>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          className="w-full p-4 bg-white border border-stone-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          <option value="newest">Uusimad</option>
+          <option value="price-low">Odavamad</option>
+          <option value="price-high">Kallimad</option>
+          <option value="rating">Parim hinnang</option>
+          <option value="distance" disabled={!locationFilter.location}>Kõige lähemad</option>
+        </select>
+      </div>
+    </>
+  );
+
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
-        <aside className="w-full md:w-80 flex-shrink-0">
-          <div className="sticky top-24 space-y-8">
-            <div className="rounded-[28px] bg-gradient-to-br from-white via-emerald-50/40 to-stone-50 text-stone-900 p-5 border border-stone-200 shadow-sm">
+        <aside className="hidden md:block w-full md:w-80 flex-shrink-0">
+          <div className="sticky top-24 space-y-6">
+            <button
+              type="button"
+              onClick={() => setIsLocationModalOpen(true)}
+              className="w-full rounded-[28px] bg-gradient-to-br from-white via-emerald-50/40 to-stone-50 text-left text-stone-900 p-5 border border-stone-200 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
+            >
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-2">Asukohapõhine otsing</p>
-                  <h3 className="text-[26px] leading-[1.05] font-black text-stone-900">Leia enda lähedal olevad aiatooted</h3>
+                  <h3 className="text-[24px] leading-[1.05] font-black text-stone-900">
+                    {locationFilter.location ? locationFilter.location.label : 'Vali asukoht, et otsida lähedalt'}
+                  </h3>
                   <p className="text-sm text-stone-500 mt-4 max-w-[24ch]">
-                    Sea punkt kaardil, sisesta raadius km-des ja filtreeri välja ainult sobivas kauguses müüjad.
+                    {locationFilter.location
+                      ? `${locationFilter.radiusKm} km raadius. Vajuta, et muuta asukohta või otsinguala.`
+                      : 'Ava kaart ja määra piirkond, kus soovid kohalikke müüjaid näha.'}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-stone-900 flex items-center justify-center text-lg text-emerald-300 shrink-0 shadow-sm">
@@ -294,29 +391,11 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400">Praegune filter</p>
-                {locationFilter.location ? (
-                  <>
-                    <p className="font-bold text-stone-900 line-clamp-2">{locationFilter.location.label}</p>
-                    <p className="text-sm text-stone-500">
-                      Raadius: {locationFilter.radiusKm} km
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-stone-500">Asukoht pole veel valitud. Praegu näed kõiki müüjaid.</p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsLocationModalOpen(true)}
-                className="mt-5 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3.5 font-bold transition-colors"
-              >
-                Ava kaardifilter
-              </button>
-
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/90 border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700">
+                  <i className="fa-solid fa-location-crosshairs text-emerald-600"></i>
+                  Ava asukohafilter
+                </span>
                 {locationFilter.location && (
                   <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800">
                     <i className="fa-solid fa-location-dot text-emerald-600"></i>
@@ -330,123 +409,71 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                   </span>
                 )}
               </div>
-            </div>
+            </button>
 
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Kategooriad</h3>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="text-[11px] font-bold text-emerald-600 hover:underline"
-                >
-                  Lähtesta
-                </button>
-              </div>
-              <div className="space-y-1">
-                <button
-                  onClick={() => setSelectedCat(null)}
-                  className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${!selectedCat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
-                >
-                  Koik tooted
-                </button>
-                {CATEGORIES.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCat(cat)}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-all ${selectedCat === cat ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-600 hover:bg-stone-100'}`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="rounded-[28px] bg-white border border-stone-200 shadow-sm p-5 space-y-6">
+              {renderFilterSections()}
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Hinnavahemik</h3>
-                <span className="text-[11px] text-stone-400 font-bold">
-                  {priceBounds.max > 0 ? `${priceBounds.min.toFixed(2)}€ - ${priceBounds.max.toFixed(2)}€` : 'Puudub'}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="space-y-2">
-                  <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">Alates</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={minPriceInput}
-                    onChange={(e) => setMinPriceInput(e.target.value)}
-                    placeholder={priceBounds.min > 0 ? priceBounds.min.toFixed(2) : '0.00'}
-                    className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">Kuni</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={maxPriceInput}
-                    onChange={(e) => setMaxPriceInput(e.target.value)}
-                    placeholder={priceBounds.max > 0 ? priceBounds.max.toFixed(2) : '0.00'}
-                    className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Sorteeri</h3>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="w-full p-4 bg-white border border-stone-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-sm font-black text-stone-800 transition-all hover:border-emerald-300 hover:bg-emerald-50"
               >
-                <option value="newest">Uusimad</option>
-                <option value="price-low">Odavamad</option>
-                <option value="price-high">Kallimad</option>
-                <option value="rating">Parim hinnang</option>
-                <option value="distance" disabled={!locationFilter.location}>Kõige lähemad</option>
-              </select>
+                <i className="fa-solid fa-rotate-left text-emerald-600"></i>
+                Lähtesta filtrid
+              </button>
             </div>
           </div>
         </aside>
 
         <main className="flex-grow min-w-0">
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-4 mb-6">
-            <div className="relative">
-              <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"></i>
-              <input
-                type="text"
-                placeholder="Otsi tooteid, kirjeldusi, müüjaid või asukohti..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium"
-              />
-            </div>
+          <div className="md:hidden grid grid-cols-2 gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setIsMobileFiltersOpen(true)}
+              className="rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/60 transition-all text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-700">
+                  <i className="fa-solid fa-sliders"></i>
+                </div>
+                <div className="min-w-0">
+                  <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-[0.22em] mb-1">Kategooriad ja filtrid</span>
+                  <span className="block font-bold text-stone-900 truncate">
+                    {selectedCat || (activeFilterCount > 0 ? `${activeFilterCount} aktiivset` : 'Ava valikud')}
+                  </span>
+                  <span className="block text-xs text-stone-500 mt-1">Puuduta, et filtreid hallata</span>
+                </div>
+              </div>
+            </button>
 
             <button
               type="button"
               onClick={() => setIsLocationModalOpen(true)}
               className="rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/60 transition-all text-left"
             >
-              <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-[0.22em] mb-2">Asukoht ja km</span>
-              {locationFilter.location ? (
-                <>
-                  <span className="block font-bold text-stone-900 truncate">{locationFilter.location.label}</span>
-                  <span className="block text-sm text-emerald-700 mt-1">{locationFilter.radiusKm} km raadius</span>
-                </>
-              ) : (
-                <>
-                  <span className="block font-bold text-stone-900">Määra punkt kaardil</span>
-                  <span className="block text-sm text-stone-500 mt-1">Luba asukoht või sisesta ise</span>
-                </>
-              )}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <i className="fa-solid fa-map-location-dot"></i>
+                </div>
+                <div className="min-w-0">
+                  <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-[0.22em] mb-1">Asukoht</span>
+                  <span className="block font-bold text-stone-900 truncate">{locationButtonLabel}</span>
+                  <span className="block text-xs text-stone-500 mt-1 truncate">{locationButtonHelper}</span>
+                </div>
+              </div>
             </button>
+          </div>
+
+          <div className="mb-6 relative">
+            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"></i>
+            <input
+              type="text"
+              placeholder="Otsi tooteid, kirjeldusi, müüjaid või asukohti..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 transition-all outline-none font-medium"
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
@@ -462,6 +489,12 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                 <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-wider">
                   <i className="fa-solid fa-filter"></i>
                   {selectedCat}
+                </div>
+              )}
+              {activeFilterCount > 0 && (
+                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-stone-100 text-stone-700 text-xs font-bold uppercase tracking-wider md:hidden">
+                  <i className="fa-solid fa-sliders"></i>
+                  {activeFilterCount} filtrit
                 </div>
               )}
               {locationFilter.location && (
@@ -598,6 +631,56 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           )}
         </main>
       </div>
+
+      {isMobileFiltersOpen && (
+        <div className="fixed inset-0 z-[130] md:hidden">
+          <button
+            type="button"
+            aria-label="Sulge filtrid"
+            onClick={() => setIsMobileFiltersOpen(false)}
+            className="absolute inset-0 bg-stone-900/35 backdrop-blur-sm"
+          ></button>
+
+          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[85vh] overflow-hidden rounded-t-[32px] border-t border-stone-200 bg-white shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">Filtrid</p>
+                <h3 className="text-lg font-black text-stone-900">Kategooriad ja valikud</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileFiltersOpen(false)}
+                className="w-11 h-11 rounded-full bg-stone-100 text-stone-500"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-5 space-y-6">
+              {renderFilterSections()}
+            </div>
+
+            <div className="border-t border-stone-100 bg-white p-4 space-y-3">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-4 py-4 text-base font-black text-emerald-900"
+              >
+                <i className="fa-solid fa-rotate-left"></i>
+                Lähtesta filtrid
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMobileFiltersOpen(false)}
+                className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-4 text-sm font-bold text-stone-700"
+              >
+                <i className="fa-solid fa-check"></i>
+                Peida filtrid
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <LocationPickerModal
         isOpen={isLocationModalOpen}
