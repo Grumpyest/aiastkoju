@@ -3,6 +3,7 @@ import {
   assertPaymentEnv,
   getRequestUser,
   getSiteUrl,
+  isValidEmail,
   MARKETPLACE_CURRENCY,
   PLATFORM_FEE_CENTS,
   stripe,
@@ -40,6 +41,10 @@ Deno.serve(async (req) => {
 
     if (!buyer?.name?.trim() || !buyer?.email?.trim() || !buyer?.phone?.trim()) {
       return errorResponse('Nimi, e-post ja telefon on makse jaoks kohustuslikud.', 400);
+    }
+
+    if (!isValidEmail(buyer.email)) {
+      return errorResponse('Palun sisesta korrektne e-posti aadress, näiteks nimi@example.com.', 400);
     }
 
     if (items.length === 0) {

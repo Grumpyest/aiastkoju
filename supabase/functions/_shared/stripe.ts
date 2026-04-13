@@ -33,6 +33,22 @@ export const PLATFORM_FEE_CENTS = Math.max(
 
 export const MARKETPLACE_CURRENCY = (Deno.env.get('STRIPE_CURRENCY') || 'eur').toLowerCase();
 
+export const isValidEmail = (email?: string | null) => {
+  if (!email) {
+    return false;
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+};
+
+export const normalizeOptionalEmail = (email?: string | null) => {
+  if (!isValidEmail(email)) {
+    return undefined;
+  }
+
+  return email!.trim().toLowerCase();
+};
+
 export const getSiteUrl = (req: Request) => {
   const configuredUrl = Deno.env.get('SITE_URL');
   const origin = req.headers.get('origin');
@@ -82,18 +98,19 @@ export const getProfile = async (userId: string) => {
 
 export const ensureStripeCustomer = async (options: {
   userId: string;
-  email: string;
+  email?: string | null;
   name?: string | null;
 }) => {
   const profile = await getProfile(options.userId);
   const existingCustomerId = profile?.stripe_customer_id;
+  const email = normalizeOptionalEmail(options.email);
 
   if (existingCustomerId) {
     return String(existingCustomerId);
   }
 
   const customer = await stripe.customers.create({
-    email: options.email,
+    email,
     name: options.name || undefined,
     metadata: {
       supabase_user_id: options.userId,

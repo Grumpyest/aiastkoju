@@ -37,10 +37,36 @@ export const getPaymentProfile = async () => {
   const { data, error } = await supabase.functions.invoke<PaymentProfileSummary>('payments-get-profile');
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(await getFunctionErrorMessage(error));
   }
 
   return data ?? {};
+};
+
+const getFunctionErrorMessage = async (error: any) => {
+  const fallback = error?.message || 'Makse tegevus ebaõnnestus.';
+  const response = error?.context;
+
+  if (!response) {
+    return fallback;
+  }
+
+  try {
+    const clonedResponse = typeof response.clone === 'function' ? response.clone() : response;
+    const payload = await clonedResponse.json();
+
+    if (payload?.error) {
+      return String(payload.error);
+    }
+
+    if (payload?.message) {
+      return String(payload.message);
+    }
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
 };
 
 export const redirectToPaymentFunction = async (
@@ -52,7 +78,7 @@ export const redirectToPaymentFunction = async (
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(await getFunctionErrorMessage(error));
   }
 
   if (data?.error) {

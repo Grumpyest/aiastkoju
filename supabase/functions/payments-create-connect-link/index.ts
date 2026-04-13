@@ -1,5 +1,13 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
-import { assertPaymentEnv, getProfile, getSiteUrl, requireRequestUser, stripe, supabaseAdmin } from '../_shared/stripe.ts';
+import {
+  assertPaymentEnv,
+  getProfile,
+  getSiteUrl,
+  normalizeOptionalEmail,
+  requireRequestUser,
+  stripe,
+  supabaseAdmin,
+} from '../_shared/stripe.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,7 +30,7 @@ Deno.serve(async (req) => {
       const account = await stripe.accounts.create({
         type: 'express',
         country: Deno.env.get('STRIPE_CONNECT_COUNTRY') || 'EE',
-        email: profile.email || user.email || undefined,
+        email: normalizeOptionalEmail(profile.email || user.email),
         business_type: 'individual',
         capabilities: {
           card_payments: { requested: true },
