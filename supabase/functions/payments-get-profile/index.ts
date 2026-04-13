@@ -1,5 +1,6 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
 import {
+  assertPaymentEnv,
   externalAccountSummary,
   getPrimaryBuyerPaymentMethod,
   getProfile,
@@ -14,6 +15,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    assertPaymentEnv();
+
     const user = await requireRequestUser(req);
     const profile = await getProfile(user.id);
 

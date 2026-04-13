@@ -59,6 +59,8 @@ const getDistanceState = (distanceKm?: number | null) => {
   };
 };
 
+const PLATFORM_SERVICE_FEE_EUR = 0.12;
+
 const CheckoutView: React.FC<CheckoutViewProps> = ({
   user,
   cart,
@@ -195,6 +197,9 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
   }, [buyerResolvedLocation, itemsBySeller, sellerResolvedLocations]);
 
   const total = cartItemsWithDetails.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+  const sellerOrderCount = Object.keys(itemsBySeller).length;
+  const serviceFeeTotal = sellerOrderCount * PLATFORM_SERVICE_FEE_EUR;
+  const payableTotal = total + serviceFeeTotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -389,9 +394,19 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
               })}
             </div>
 
-            <div className="pt-6 border-t border-stone-100 flex justify-between items-center gap-4">
-              <span className="text-sm font-bold text-stone-400 uppercase">Kokku tasuda:</span>
-              <span className="shrink-0 text-3xl font-black text-emerald-800">{total.toFixed(2)}€</span>
+            <div className="pt-6 border-t border-stone-100 space-y-3">
+              <div className="flex justify-between items-center gap-4 text-sm">
+                <span className="font-bold text-stone-400 uppercase">Tooted:</span>
+                <span className="font-black text-stone-900">{total.toFixed(2)}€</span>
+              </div>
+              <div className="flex justify-between items-center gap-4 text-sm">
+                <span className="font-bold text-stone-400 uppercase">Teenustasu:</span>
+                <span className="font-black text-stone-900">{serviceFeeTotal.toFixed(2)}€</span>
+              </div>
+              <div className="flex justify-between items-center gap-4 pt-3 border-t border-stone-100">
+                <span className="text-sm font-bold text-stone-400 uppercase">Kokku tasuda:</span>
+                <span className="shrink-0 text-3xl font-black text-emerald-800">{payableTotal.toFixed(2)}€</span>
+              </div>
             </div>
           </div>
         </div>
@@ -484,7 +499,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <div className="text-sm text-amber-900">
                   <p className="font-bold">Oluline info!</p>
                   <p className="opacity-80">
-                    Makse toimub turvaliselt Stripe'is. Platvorm võtab tellimuse summast 0.12€ teenustasu ning ülejäänu liigub müüjale.
+                    Makse toimub turvaliselt Stripe'is. Ostja maksab 0.12€ teenustasu iga müüja tellimuse kohta ning toodete summa liigub müüjale.
                   </p>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
 import {
+  assertPaymentEnv,
   ensureStripeCustomer,
   getProfile,
   getSiteUrl,
@@ -13,6 +14,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    assertPaymentEnv();
+
     const user = await requireRequestUser(req);
     const profile = await getProfile(user.id);
     const priceId = Deno.env.get('STRIPE_GARDENER_MONTHLY_PRICE_ID');

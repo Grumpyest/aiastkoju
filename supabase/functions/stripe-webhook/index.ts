@@ -1,7 +1,7 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
 import {
+  assertPaymentEnv,
   getPrimaryBuyerPaymentMethod,
-  PLATFORM_FEE_CENTS,
   stripe,
   supabaseAdmin,
 } from '../_shared/stripe.ts';
@@ -99,11 +99,7 @@ const completeMarketplaceCheckout = async (session: any) => {
 
     const seller = sellersById.get(String(order.seller_id));
     const amountCents = Math.round(Number(order.total || 0) * 100);
-    const platformFeeCents = Math.min(
-      amountCents,
-      Math.max(0, Number(order.platform_fee_cents ?? PLATFORM_FEE_CENTS))
-    );
-    const sellerAmountCents = Math.max(0, amountCents - platformFeeCents);
+    const sellerAmountCents = Math.max(0, amountCents);
 
     if (seller?.stripe_connect_account_id && sellerAmountCents > 0) {
       await stripe.transfers.create(
@@ -148,6 +144,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    assertPaymentEnv();
+
     const signature = req.headers.get('stripe-signature');
 
     if (!signature) {

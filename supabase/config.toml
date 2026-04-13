@@ -1,2 +1,20 @@
+[functions.payments-get-profile]
+verify_jwt = false
+
+[functions.payments-create-connect-link]
+verify_jwt = false
+
+[functions.payments-create-setup-session]
+verify_jwt = false
+
+[functions.payments-create-seller-subscription]
+verify_jwt = false
+
+[functions.payments-cancel-seller-subscription]
+verify_jwt = false
+
+[functions.payments-create-checkout]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false
