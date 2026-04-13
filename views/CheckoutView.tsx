@@ -407,7 +407,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => onRemoveFromCart(item.productId)}
-                                    className="text-[10px] font-bold text-red-500 whitespace-nowrap"
+                                    className="text-xs font-bold text-red-500 whitespace-nowrap"
                                   >
                                     Eemalda
                                   </button>

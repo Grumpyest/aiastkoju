@@ -18,25 +18,38 @@ L.Icon.Default.mergeOptions({
 
 const DEFAULT_CENTER: [number, number] = [59.437, 24.7536];
 
-export interface LocationMapMarker {
-  id: string;
-  lat: number;
-  lng: number;
-  label: string;
-  subtitle?: string;
-}
-
 interface LocationPickerModalProps {
   isOpen: boolean;
   value: MarketplaceLocationFilter;
   defaultQuery?: string;
-  markers?: LocationMapMarker[];
   onClose: () => void;
   onApply: (filter: MarketplaceLocationFilter) => void;
 }
 
 const MapViewportSync: React.FC<{ center: [number, number] }> = ({ center }) => {
   const map = useMap();
+
+  useEffect(() => {
+    const refreshMapSize = () => {
+      map.invalidateSize();
+    };
+
+    refreshMapSize();
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(refreshMapSize);
+    const timeoutId = window.setTimeout(refreshMapSize, 250);
+    const settledTimeoutId = window.setTimeout(refreshMapSize, 600);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+      window.clearTimeout(settledTimeoutId);
+    };
+  }, [center, map]);
 
   useEffect(() => {
     map.flyTo(center, map.getZoom(), {
@@ -64,7 +77,6 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
   isOpen,
   value,
   defaultQuery = '',
-  markers = [],
   onClose,
   onApply,
 }) => {
@@ -328,21 +340,11 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
                 </>
               )}
 
-              {markers.map(marker => (
-                <Marker key={marker.id} position={[marker.lat, marker.lng]}>
-                  <Popup>
-                    <div className="space-y-1">
-                      <p className="font-bold">{marker.label}</p>
-                      {marker.subtitle && <p className="text-xs text-stone-500">{marker.subtitle}</p>}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
             </MapContainer>
           </div>
 
           <div className="text-sm text-stone-500">
-            Klõpsa kaardil, kui tahad markerit käsitsi paigutada. Müüjate markerid kuvatakse kaardil siis, kui nende asukoht on lahendatud.
+            Klõpsa kaardil, kui tahad markerit käsitsi paigutada. Valitud punkti ümber kuvatakse sinu otsinguraadius.
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { MarketplaceLocationFilter, Product, ResolvedLocation, User } from '../types';
 import { CATEGORIES } from '../constants';
-import LocationPickerModal, { LocationMapMarker } from '../components/LocationPickerModal';
+import LocationPickerModal from '../components/LocationPickerModal';
 import { calculateDistanceKm, formatDistanceKm, geocodeLocation } from '../utils/location';
 
 interface CatalogViewProps {
@@ -235,31 +235,6 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     sellerDistanceById,
     sortBy,
   ]);
-
-  const sellerMarkers = useMemo<LocationMapMarker[]>(() => {
-    return sellerSummaries.flatMap(seller => {
-      const resolved = sellerLocationsById[seller.sellerId];
-
-      if (!resolved) {
-        return [];
-      }
-
-      const distance = sellerDistanceById[seller.sellerId];
-      const subtitleParts = [seller.sellerLocation];
-
-      if (typeof distance === 'number') {
-        subtitleParts.push(`${formatDistanceKm(distance)} kaugusel`);
-      }
-
-      return [{
-        id: seller.sellerId,
-        lat: resolved.lat,
-        lng: resolved.lng,
-        label: seller.sellerName,
-        subtitle: subtitleParts.join(' • '),
-      }];
-    });
-  }, [sellerDistanceById, sellerLocationsById, sellerSummaries]);
 
   const visibleSellerCount = useMemo(() => {
     return new Set(filteredProducts.map(product => product.sellerId)).size;
@@ -728,7 +703,6 @@ const CatalogView: React.FC<CatalogViewProps> = ({
         isOpen={isLocationModalOpen}
         value={locationFilter}
         defaultQuery={user?.location || 'Tallinn, Estonia'}
-        markers={sellerMarkers}
         onClose={() => setIsLocationModalOpen(false)}
         onApply={setLocationFilter}
       />

@@ -277,7 +277,7 @@ const handleRegister = async (e: React.FormEvent) => {
                                   <p className="text-xs font-bold truncate">{product?.title}</p>
                                   <p className="text-[10px] text-stone-500 mt-1">{Number(product?.price ?? 0).toFixed(2)}€ / {product?.unit}</p>
                                 </div>
-                                <button onClick={() => onRemoveFromCart(item.productId)} className="text-[10px] text-red-500 font-bold whitespace-nowrap">Eemalda</button>
+                                <button onClick={() => onRemoveFromCart(item.productId)} className="text-xs text-red-500 font-bold whitespace-nowrap">Eemalda</button>
                               </div>
                               <div className="mt-3 flex items-center justify-between gap-3">
                                 <div className="inline-flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
@@ -468,7 +468,7 @@ const handleRegister = async (e: React.FormEvent) => {
                     <div className="flex-grow min-w-0">
                       <p className="text-xs font-bold truncate">{product?.title}</p>
                       <p className="text-[10px] text-stone-500">{item.quantity} {product?.unit} x {product?.price.toFixed(2)}€</p>
-                      <button onClick={() => onRemoveFromCart(item.productId)} className="text-[9px] text-red-500 font-bold">Eemalda</button>
+                      <button onClick={() => onRemoveFromCart(item.productId)} className="text-xs text-red-500 font-bold">Eemalda</button>
                     </div>
                   </div>
                 );
