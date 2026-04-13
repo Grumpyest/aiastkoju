@@ -49,10 +49,26 @@ export const normalizeOptionalEmail = (email?: string | null) => {
   return email!.trim().toLowerCase();
 };
 
+const toAbsoluteSiteUrl = (value?: string | null) => {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    return new URL(withProtocol).origin;
+  } catch {
+    return null;
+  }
+};
+
 export const getSiteUrl = (req: Request) => {
-  const configuredUrl = Deno.env.get('SITE_URL');
-  const origin = req.headers.get('origin');
-  return (configuredUrl || origin || 'http://localhost:5173').replace(/\/$/, '');
+  const configuredUrl = toAbsoluteSiteUrl(Deno.env.get('SITE_URL'));
+  const origin = toAbsoluteSiteUrl(req.headers.get('origin'));
+  return configuredUrl || origin || 'http://localhost:5173';
 };
 
 export const getRequestUser = async (req: Request) => {

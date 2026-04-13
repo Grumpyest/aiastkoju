@@ -398,7 +398,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     type="button"
                     onClick={() => startPaymentRedirect('buyer-card', 'payments-create-setup-session')}
                     disabled={paymentAction === 'buyer-card'}
-                    className="mt-5 w-full rounded-2xl bg-white border border-stone-200 px-4 py-3 text-sm font-bold text-stone-800 hover:border-emerald-200 hover:bg-emerald-50 disabled:opacity-60"
+                    className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {paymentAction === 'buyer-card' ? 'Avame Stripe...' : paymentProfile?.buyerCard ? 'Uuenda kaarti' : 'Salvesta kaart'}
                   </button>
@@ -409,7 +409,11 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">Aedniku väljamakse</p>
                       <p className="text-lg font-black text-stone-900">
-                        {maskLast4(paymentProfile?.payoutMethod?.last4)}
+                        {paymentProfile?.connect?.payoutsEnabled
+                          ? 'Väljamakse konto ühendatud'
+                          : paymentProfile?.payoutMethod?.last4
+                          ? `Pangakonto ****${paymentProfile.payoutMethod.last4}`
+                          : 'Väljamakse konto pole ühendatud'}
                       </p>
                       <p className="text-sm text-stone-500 mt-1">
                         {user.role !== UserRole.GARDENER
