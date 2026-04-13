@@ -1,8 +1,9 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../supabaseClient';
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
+import { getPaymentProfile, maskLast4, PaymentProfileSummary, redirectToPaymentFunction } from '../utils/payments';
 
 interface ProfileViewProps {
   user: User;
@@ -21,11 +22,51 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
     location: user.location || '',
     avatar: user.avatar || '',
   });
+  const [paymentProfile, setPaymentProfile] = useState<PaymentProfileSummary | null>(null);
+  const [paymentAction, setPaymentAction] = useState<string | null>(null);
 
 const avatarInputRef = useRef<HTMLInputElement>(null);
 const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
 const safeName = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+useEffect(() => {
+  let isCancelled = false;
+
+  const loadPaymentProfile = async () => {
+    try {
+      const profile = await getPaymentProfile();
+
+      if (!isCancelled) {
+        setPaymentProfile(profile);
+
+        if (['active', 'trialing'].includes(String(profile.subscription?.status)) && user.role !== UserRole.GARDENER) {
+          setUser(prev => prev ? { ...prev, role: UserRole.GARDENER } : prev);
+        }
+      }
+    } catch (error) {
+      if (!isCancelled) {
+        console.warn('Payment profile load failed', error);
+      }
+    }
+  };
+
+  loadPaymentProfile();
+
+  return () => {
+    isCancelled = true;
+  };
+}, [setUser, user.id, user.role]);
+
+const startPaymentRedirect = async (action: string, functionName: string, body: Record<string, unknown> = {}) => {
+  try {
+    setPaymentAction(action);
+    await redirectToPaymentFunction(functionName, body);
+  } catch (error: any) {
+    onNotify?.(error?.message || 'Makse tegevust ei saanud alustada.', 'error');
+    setPaymentAction(null);
+  }
+};
 
 const uploadAvatarToStorage = async (file: File, path: string) => {
   const { error } = await supabase.storage.from('product-images').upload(path, file, {
@@ -126,25 +167,19 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
   try {
     if (user.role === UserRole.GARDENER) {
       const ok = confirm(
-        'Kas soovid tõesti aedniku staatusest loobuda? Sinu tooted ei ole enam avalikult nähtavad.'
+        'Kas soovid tõesti aedniku staatusest loobuda? Sinu kuutasu lõpetatakse ja tooted ei ole enam avalikult nähtavad.'
       );
       if (!ok) return;
 
-      // 1) profiil ostjaks
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_seller: false })
-        .eq('id', user.id);
+      setPaymentAction('cancel-subscription');
+      const { error } = await supabase.functions.invoke('payments-cancel-seller-subscription');
 
       if (error) throw error;
 
-      await supabase
-        .from('products')
-        .update({ is_active: false })
-        .eq('seller_id', user.id);
+      setPaymentAction(null);
 
       setUser({ ...user, role: UserRole.BUYER });
-      onNotify?.('Oled nüüd uuesti Ostja rollis.', 'success');
+      onNotify?.('Aedniku staatus ja kuutasu on lõpetatud.', 'success');
       return;
     }
 
@@ -161,14 +196,13 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     }
 
     const ok = confirm(
-      'Soovid hakata Aednikuks? Rakendub aedniku kuutasu 1€/kuu (prototüüp). Kas nõustud?'
+      'Soovid hakata Aednikuks? Sind suunatakse turvalisse Stripe maksevaatesse 1€/kuu tellimuse aktiveerimiseks.'
     );
     if (!ok) return;
 
     const { error } = await supabase
       .from('profiles')
       .update({
-        is_seller: true,
         phone: nextPhone,
         location: nextLocation,
       })
@@ -180,7 +214,6 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       data: {
         phone: nextPhone,
         location: nextLocation,
-        is_seller: true,
       },
     });
 
@@ -188,20 +221,15 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       console.warn('Auth metadata location update failed', metadataError);
     }
 
-    await supabase
-      .from('products')
-      .update({ is_active: true })
-      .eq('seller_id', user.id);
-
     setUser({
       ...user,
-      role: UserRole.GARDENER,
       phone: nextPhone,
       location: nextLocation,
     });
 
-    onNotify?.('Oled nüüd Aednik! Päisesse lisandus "Töölaud".', 'success');
+    await startPaymentRedirect('seller-subscription', 'payments-create-seller-subscription');
   } catch (err: any) {
+    setPaymentAction(null);
     onNotify?.(err?.message || 'Rolli vahetus ebaõnnestus', 'error');
   }
 };
@@ -280,9 +308,14 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
              </p>
              <button 
               onClick={toggleGardenerRole} 
-              className={`w-full py-3 rounded-xl font-bold text-xs shadow-lg transition-all active:scale-95 ${user.role === UserRole.GARDENER ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-emerald-900 hover:bg-emerald-50'}`}
+              disabled={paymentAction === 'seller-subscription' || paymentAction === 'cancel-subscription'}
+              className={`w-full py-3 rounded-xl font-bold text-xs shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed ${user.role === UserRole.GARDENER ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-emerald-900 hover:bg-emerald-50'}`}
              >
-               {user.role === UserRole.GARDENER ? 'Lõpeta aedniku staatus' : 'Aktiveeri aedniku staatus (1€/kuu)'}
+               {paymentAction === 'seller-subscription'
+                 ? 'Avame Stripe makset...'
+                 : paymentAction === 'cancel-subscription'
+                 ? 'Lõpetame kuutasu...'
+                 : user.role === UserRole.GARDENER ? 'Lõpeta aedniku staatus' : 'Aktiveeri aedniku staatus (1€/kuu)'}
              </button>
           </div>
 
@@ -333,6 +366,74 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
               <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-emerald-700 transition-all">Salvesta muudatused</button>
            </form>
+
+           <div className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm space-y-6">
+              <div>
+                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Maksed</p>
+                <h3 className="text-lg font-bold text-stone-900">Makseviisid ja väljamaksed</h3>
+                <p className="text-sm text-stone-500 mt-2">
+                  Kaardiandmed salvestatakse Stripe'is. Aiast Koju kuvab ainult kaardi tüübi ja viimased 4 numbrit.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-3xl border border-stone-100 bg-stone-50/60 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">Ostja maksekaart</p>
+                      <p className="text-lg font-black text-stone-900">
+                        {maskLast4(paymentProfile?.buyerCard?.last4)}
+                      </p>
+                      <p className="text-sm text-stone-500 mt-1">
+                        {paymentProfile?.buyerCard
+                          ? `${paymentProfile.buyerCard.brand || 'kaart'} · ${paymentProfile.buyerCard.expMonth}/${paymentProfile.buyerCard.expYear}`
+                          : 'Lisa kaart, et järgmine makse oleks kiirem.'}
+                      </p>
+                    </div>
+                    <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-emerald-600 shadow-sm">
+                      <i className="fa-solid fa-credit-card"></i>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => startPaymentRedirect('buyer-card', 'payments-create-setup-session')}
+                    disabled={paymentAction === 'buyer-card'}
+                    className="mt-5 w-full rounded-2xl bg-white border border-stone-200 px-4 py-3 text-sm font-bold text-stone-800 hover:border-emerald-200 hover:bg-emerald-50 disabled:opacity-60"
+                  >
+                    {paymentAction === 'buyer-card' ? 'Avame Stripe...' : paymentProfile?.buyerCard ? 'Uuenda kaarti' : 'Salvesta kaart'}
+                  </button>
+                </div>
+
+                <div className="rounded-3xl border border-stone-100 bg-stone-50/60 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">Aedniku väljamakse</p>
+                      <p className="text-lg font-black text-stone-900">
+                        {maskLast4(paymentProfile?.payoutMethod?.last4)}
+                      </p>
+                      <p className="text-sm text-stone-500 mt-1">
+                        {user.role !== UserRole.GARDENER
+                          ? 'Väljamakse konto lisamine avaneb pärast aedniku staatuse aktiveerimist.'
+                          : paymentProfile?.connect?.payoutsEnabled
+                          ? 'Stripe konto on väljamakseteks valmis.'
+                          : 'Ühenda Stripe konto, et ostude raha sinuni jõuaks.'}
+                      </p>
+                    </div>
+                    <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-emerald-600 shadow-sm">
+                      <i className="fa-solid fa-building-columns"></i>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => startPaymentRedirect('connect', 'payments-create-connect-link')}
+                    disabled={user.role !== UserRole.GARDENER || paymentAction === 'connect'}
+                    className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {paymentAction === 'connect' ? 'Avame Stripe...' : paymentProfile?.connect?.accountId ? 'Halda väljamakse kontot' : 'Ühenda väljamakse konto'}
+                  </button>
+                </div>
+              </div>
+           </div>
         </div>
       </div>
     </div>

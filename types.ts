@@ -32,11 +32,8 @@ export interface User {
   role: UserRole;
   location?: string;
   avatar?: string;
-  bankDetails?: {
-    cardNumber: string;
-    expiry: string;
-    cvv: string;
-  };
+  paymentCardLast4?: string;
+  payoutMethodLast4?: string;
 }
 
 export interface Coordinates {
@@ -91,6 +88,7 @@ export interface Order {
   sellerName?: string;
   sellerLocation?: string;
   status: OrderStatus;
+  paymentStatus?: string;
   total: number;
   items: {
     productId: string;

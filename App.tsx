@@ -145,6 +145,50 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    const paymentMethod = params.get('payment_method');
+    const gardenerSubscription = params.get('gardener_subscription');
+    const connect = params.get('connect');
+
+    if (payment === 'success') {
+      setCart([]);
+      setCurrentView(user ? 'orders' : 'catalog');
+      showToast('Makse õnnestus! Tellimus edastati müüjale.', 'success');
+    } else if (payment === 'cancelled') {
+      showToast('Makse katkestati. Ostukorv jäi alles.', 'error');
+    }
+
+    if (paymentMethod === 'saved') {
+      setCurrentView('profile');
+      showToast('Maksekaart salvestati turvaliselt Stripe’is.', 'success');
+    } else if (paymentMethod === 'cancelled') {
+      setCurrentView('profile');
+      showToast('Kaardi salvestamine katkestati.', 'error');
+    }
+
+    if (gardenerSubscription === 'success') {
+      setCurrentView('profile');
+      showToast('Aedniku kuutasu makse õnnestus. Stripe kinnitab staatuse hetkega.', 'success');
+    } else if (gardenerSubscription === 'cancelled') {
+      setCurrentView('profile');
+      showToast('Aedniku kuutasu makse katkestati.', 'error');
+    }
+
+    if (connect === 'return') {
+      setCurrentView('profile');
+      showToast('Stripe konto ühendamine lõpetati.', 'success');
+    } else if (connect === 'refresh') {
+      setCurrentView('profile');
+      showToast('Stripe konto ühendamine vajab jätkamist.', 'error');
+    }
+
+    if (payment || paymentMethod || gardenerSubscription || connect) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [user]);
+
+  useEffect(() => {
     const init = async () => {
       const { data: sess } = await supabase.auth.getSession();
       const supabaseUser = sess.session?.user;
@@ -330,6 +374,7 @@ const App: React.FC = () => {
         sellerName: seller?.full_name || 'Müüja',
         sellerLocation: seller?.location || '',
         status: orderRow.status as OrderStatus,
+        paymentStatus: orderRow.payment_status || 'unpaid',
         total: Number(orderRow.total ?? 0),
         createdAt: String(orderRow.created_at ?? ''),
         deliveryAddress: orderRow.delivery_address || '',
@@ -788,7 +833,7 @@ const App: React.FC = () => {
                 <p className="font-bold text-red-600">Oluline teada:</p>
                 <p>1. Aiast Koju on kuulutuste platvorm ja infovahetuskeskkond. Meie ei ole kaupade müüja ega tootja.</p>
                 <p>2. Platvorm ei vastuta pakutava kauba kvaliteedi, koguse ega kirjelduse vastavuse eest. Kogu vastutus lasub kauba pakkujal (Müüjal).</p>
-                <p>3. Tehingud, maksed ja kauba üleandmine toimuvad otse Ostja ja Müüja vahel. Platvorm ei paku maksete vahendust ega transporditeenust.</p>
+                <p>3. Makseid vahendab Stripe. Aiast Koju võib võtta tellimuselt teenustasu ning müüjale kantakse ülejäänud summa Stripe Connecti kaudu.</p>
                 <p>4. Platvorm jätab endale õiguse eemaldada kuulutusi või kasutajaid, kes rikuvad häid tavasid.</p>
               </div>
             )}

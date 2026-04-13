@@ -1,8 +1,8 @@
 import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { User, Product, CartItem, Order, OrderStatus, ResolvedLocation } from '../types';
-import { supabase } from '../supabaseClient';
+import { User, Product, CartItem, Order, ResolvedLocation } from '../types';
 import { buildExternalMapUrl, calculateDistanceKm, formatDistanceKm, geocodeLocation } from '../utils/location';
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
+import { redirectToPaymentFunction } from '../utils/payments';
 
 interface CheckoutViewProps {
   user: User | null;
@@ -59,18 +59,6 @@ const getDistanceState = (distanceKm?: number | null) => {
   };
 };
 
-const createClientUuid = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
-    const random = Math.random() * 16 | 0;
-    const value = char === 'x' ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
-};
-
 const CheckoutView: React.FC<CheckoutViewProps> = ({
   user,
   cart,
@@ -91,6 +79,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [buyerResolvedLocation, setBuyerResolvedLocation] = useState<ResolvedLocation | null>(null);
   const [sellerResolvedLocations, setSellerResolvedLocations] = useState<Record<string, ResolvedLocation | null>>({});
   const [isResolvingDistances, setIsResolvingDistances] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [distanceError, setDistanceError] = useState('');
 
   const deferredAddress = useDeferredValue(formData.address);
@@ -221,80 +210,24 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
     }
 
     try {
-      const sellers = Object.keys(itemsBySeller);
-      const createdOrders: Order[] = [];
-      const buyerName = formData.name.trim();
-      const buyerEmail = formData.email.trim();
-      const buyerPhone = formData.phone.trim();
-      const deliveryAddress = formData.address.trim();
-      const notes = formData.notes.trim();
+      setIsSubmittingPayment(true);
 
-      for (const sellerId of sellers) {
-        const sellerItems = itemsBySeller[sellerId];
-        const totalAmount = sellerItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-        const orderId = createClientUuid();
-        const createdAt = new Date().toISOString();
-
-        const { error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            id: orderId,
-            buyer_id: user?.id ?? null,
-            seller_id: sellerId,
-            total: totalAmount,
-            status: OrderStatus.NEW,
-            buyer_name: buyerName,
-            buyer_email: buyerEmail,
-            buyer_phone: buyerPhone,
-            delivery_address: deliveryAddress || null,
-            notes: notes || null,
-          });
-
-        if (orderError) throw orderError;
-
-        const itemsPayload = sellerItems.map(item => ({
-          order_id: orderId,
-          product_id: item.productId,
-          seller_id: item.sellerId,
+      await redirectToPaymentFunction('payments-create-checkout', {
+        buyer: {
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
+          notes: formData.notes.trim(),
+        },
+        items: cartItemsWithDetails.map(item => ({
+          productId: item.productId,
           quantity: item.quantity,
-          unit_price: item.price,
-        }));
-
-        const { error: itemError } = await supabase
-          .from('order_items')
-          .insert(itemsPayload);
-
-        if (itemError) {
-          await supabase.from('orders').delete().eq('id', orderId);
-          throw itemError;
-        }
-
-        createdOrders.push({
-          id: orderId,
-          buyerId: user?.id ?? '',
-          buyerName,
-          buyerPhone,
-          buyerEmail,
-          sellerId,
-          sellerName: sellerItems[0].sellerName,
-          sellerLocation: sellerItems[0].sellerLocation,
-          status: OrderStatus.NEW,
-          total: totalAmount,
-          items: sellerItems.map(item => ({
-            productId: item.productId,
-            title: item.title,
-            qty: item.quantity,
-            price: item.price,
-          })),
-          createdAt,
-          deliveryAddress,
-          notes,
-        });
-      }
-
-      onComplete(createdOrders);
+        })),
+      });
     } catch (err: any) {
-      alert(err?.message || 'Tellimuse salvestamine ebaõnnestus');
+      alert(err?.message || 'Makse alustamine ebaõnnestus');
+      setIsSubmittingPayment(false);
     }
   };
 
@@ -551,16 +484,17 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <div className="text-sm text-amber-900">
                   <p className="font-bold">Oluline info!</p>
                   <p className="opacity-80">
-                    Tehingud ja kauba kättesaamine toimuvad otse müüjaga. Platvorm ei paku hetkel automaatset tarnet.
+                    Makse toimub turvaliselt Stripe'is. Platvorm võtab tellimuse summast 0.12€ teenustasu ning ülejäänu liigub müüjale.
                   </p>
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-xl shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95"
+                disabled={isSubmittingPayment}
+                className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-xl shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
               >
-                Kinnita ja esita tellimus
+                {isSubmittingPayment ? 'Suuname maksele...' : 'Maksa ja esita tellimus'}
               </button>
             </form>
           </div>
