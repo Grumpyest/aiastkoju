@@ -123,13 +123,16 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
   try {
     const nextName = formData.name.trim();
+    const nextEmail = formData.email.trim().toLowerCase();
     const nextPhone = formData.phone.trim();
     const nextLocation = formData.location.trim();
+    const emailChanged = nextEmail !== user.email.trim().toLowerCase();
 
     const { error } = await supabase
       .from('profiles')
       .update({
         full_name: nextName,
+        email: nextEmail,
         phone: nextPhone || null,
         location: nextLocation || null,
       })
@@ -138,26 +141,34 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (error) throw error;
 
     const { error: metadataError } = await supabase.auth.updateUser({
+      ...(emailChanged ? { email: nextEmail } : {}),
       data: {
         full_name: nextName,
+        email: nextEmail,
         phone: nextPhone || null,
         location: nextLocation || null,
       },
     });
 
     if (metadataError) {
-      console.warn('Auth metadata location update failed', metadataError);
+      console.warn('Auth profile update failed', metadataError);
     }
 
     setUser({
       ...user,
       name: nextName,
+      email: nextEmail,
       phone: nextPhone || undefined,
       location: nextLocation || undefined,
       avatar: formData.avatar || undefined,
     });
 
-    onNotify?.('Profiil edukalt uuendatud!', 'success');
+    onNotify?.(
+      emailChanged
+        ? 'Profiil uuendatud. Kui Supabase küsib kinnitust, kinnita uus e-post oma postkastis.'
+        : 'Profiil edukalt uuendatud!',
+      'success'
+    );
   } catch (err: any) {
     onNotify?.(err?.message || 'Profiili salvestamine ebaõnnestus', 'error');
   }
@@ -370,13 +381,13 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
            <div className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm space-y-6">
               <div>
                 <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Maksed</p>
-                <h3 className="text-lg font-bold text-stone-900">Makseviisid ja väljamaksed</h3>
+                <h3 className="text-lg font-bold text-stone-900">Maksekaart</h3>
                 <p className="text-sm text-stone-500 mt-2">
                   Kaardiandmed salvestatakse Stripe'is. Aiast Koju kuvab ainult kaardi tüübi ja viimased 4 numbrit.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 max-w-md gap-4">
                 <div className="rounded-3xl border border-stone-100 bg-stone-50/60 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -401,39 +412,6 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
                     className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {paymentAction === 'buyer-card' ? 'Avame Stripe...' : paymentProfile?.buyerCard ? 'Uuenda kaarti' : 'Salvesta kaart'}
-                  </button>
-                </div>
-
-                <div className="rounded-3xl border border-stone-100 bg-stone-50/60 p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">Aedniku väljamakse</p>
-                      <p className="text-lg font-black text-stone-900">
-                        {paymentProfile?.connect?.payoutsEnabled
-                          ? 'Väljamakse konto ühendatud'
-                          : paymentProfile?.payoutMethod?.last4
-                          ? `Pangakonto ****${paymentProfile.payoutMethod.last4}`
-                          : 'Väljamakse konto pole ühendatud'}
-                      </p>
-                      <p className="text-sm text-stone-500 mt-1">
-                        {user.role !== UserRole.GARDENER
-                          ? 'Väljamakse konto lisamine avaneb pärast aedniku staatuse aktiveerimist.'
-                          : paymentProfile?.connect?.payoutsEnabled
-                          ? 'Stripe konto on väljamakseteks valmis.'
-                          : 'Ühenda Stripe konto, et ostude raha sinuni jõuaks.'}
-                      </p>
-                    </div>
-                    <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-emerald-600 shadow-sm">
-                      <i className="fa-solid fa-building-columns"></i>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => startPaymentRedirect('connect', 'payments-create-connect-link')}
-                    disabled={user.role !== UserRole.GARDENER || paymentAction === 'connect'}
-                    className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {paymentAction === 'connect' ? 'Avame Stripe...' : paymentProfile?.connect?.accountId ? 'Halda väljamakse kontot' : 'Ühenda väljamakse konto'}
                   </button>
                 </div>
               </div>
