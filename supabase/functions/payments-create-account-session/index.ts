@@ -14,8 +14,11 @@ const connectSetupResponse = () => jsonResponse({
   setupUrl: 'https://dashboard.stripe.com/connect',
 });
 
+const getConnectMcc = () => Deno.env.get('STRIPE_CONNECT_MCC')?.trim() || '5261';
+
 const getBusinessProfile = (siteUrl: string, email?: string | null) => ({
   name: 'Aiast Koju',
+  mcc: getConnectMcc(),
   url: siteUrl,
   product_description: 'Aiast Koju on kohalik aiatoodete turg, kus aednik müüb oma kasvatatud tooteid ostjatele platvormi kaudu.',
   support_email: normalizeOptionalEmail(email),

@@ -9,6 +9,16 @@ import {
   supabaseAdmin,
 } from '../_shared/stripe.ts';
 
+const getConnectMcc = () => Deno.env.get('STRIPE_CONNECT_MCC')?.trim() || '5261';
+
+const getBusinessProfile = (siteUrl: string, email?: string | null) => ({
+  name: 'Aiast Koju',
+  mcc: getConnectMcc(),
+  url: siteUrl,
+  product_description: 'Aiast Koju on kohalik aiatoodete turg, kus aednik müüb oma kasvatatud tooteid ostjatele platvormi kaudu.',
+  support_email: normalizeOptionalEmail(email),
+});
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -24,6 +34,7 @@ Deno.serve(async (req) => {
       return errorResponse('Profiili ei leitud.', 404);
     }
 
+    const siteUrl = getSiteUrl(req);
     let accountId = profile.stripe_connect_account_id as string | null;
 
     if (!accountId) {
@@ -32,6 +43,7 @@ Deno.serve(async (req) => {
         country: Deno.env.get('STRIPE_CONNECT_COUNTRY') || 'EE',
         email: normalizeOptionalEmail(profile.email || user.email),
         business_type: 'individual',
+        business_profile: getBusinessProfile(siteUrl, profile.email || user.email),
         capabilities: {
           card_payments: { requested: true },
           transfers: { requested: true },
@@ -47,9 +59,12 @@ Deno.serve(async (req) => {
         .from('profiles')
         .update({ stripe_connect_account_id: accountId })
         .eq('id', user.id);
+    } else {
+      await stripe.accounts.update(accountId, {
+        business_profile: getBusinessProfile(siteUrl, profile.email || user.email),
+      });
     }
 
-    const siteUrl = getSiteUrl(req);
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${siteUrl}/?connect=refresh`,
