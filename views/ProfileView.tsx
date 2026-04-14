@@ -264,7 +264,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="space-y-6">
-          <div className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm text-center">
+          <div className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm text-center">
              <div className="relative w-32 h-32 mx-auto mb-6 group">
   <button
     type="button"
@@ -312,7 +312,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
              </p>
           </div>
 
-          <div className={`p-8 rounded-[32px] shadow-xl relative overflow-hidden group transition-all ${user.role === UserRole.GARDENER ? 'bg-stone-800 text-white' : 'bg-emerald-900 text-white'}`}>
+          <div className={`p-8 rounded-3xl shadow-xl relative overflow-hidden group transition-all ${user.role === UserRole.GARDENER ? 'bg-stone-800 text-white' : 'bg-emerald-900 text-white'}`}>
              <h3 className="text-lg font-bold mb-2 relative z-10">{user.role === UserRole.GARDENER ? 'Aedniku staatus: Aktiivne' : 'Hakka aednikuks!'}</h3>
              <p className="text-xs opacity-70 mb-6 relative z-10">
                {user.role === UserRole.GARDENER ? 'Sinu tellimus on aktiivne (1€/kuu). Halda tooteid töölaual.' : 'Müü oma aia saadusi teistele mugavalt vaid 1€ kuutasu eest.'}
@@ -336,7 +336,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
         </div>
 
         <div className="lg:col-span-2 space-y-8">
-           <form onSubmit={handleSave} className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm space-y-6">
+           <form onSubmit={handleSave} className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm space-y-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold">Profiili seaded</h3>
                 {(!formData.phone || !formData.location) && (
@@ -378,7 +378,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
               <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-emerald-700 transition-all">Salvesta muudatused</button>
            </form>
 
-           <div className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm space-y-6">
+           <div className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm space-y-6">
               <div>
                 <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Maksed</p>
                 <h3 className="text-lg font-bold text-stone-900">Maksekaart</h3>

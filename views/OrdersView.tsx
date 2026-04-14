@@ -279,7 +279,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                                     value={draft.comment}
                                     onChange={(e) => updateDraft(order.id, item.productId, { comment: e.target.value })}
                                     placeholder="Jaga oma kogemust selle tootega..."
-                                    className="w-full min-h-[110px] rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full min-h-28 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                   />
 
                                   <div className="mt-4">

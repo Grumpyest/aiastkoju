@@ -201,7 +201,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[140] overflow-y-auto overscroll-contain">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
       <button
         type="button"
         aria-label="Sulge asukoha valik"
@@ -210,7 +210,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
       ></button>
 
       <div className="relative z-10 min-h-full flex items-start md:items-center justify-center p-3 sm:p-4">
-        <div className="w-full max-w-3xl bg-white text-stone-900 rounded-[28px] sm:rounded-[32px] shadow-2xl border border-stone-200 overflow-hidden my-3 sm:my-4 sm:max-h-[calc(100svh-2rem)] sm:flex sm:flex-col">
+        <div className="w-full max-w-3xl bg-white text-stone-900 rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-3 sm:my-4 sm:max-h-[calc(100svh-2rem)] sm:flex sm:flex-col">
         <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black">Määra asukoht</h2>
@@ -308,12 +308,12 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
             </div>
           )}
 
-          <div className="rounded-[24px] overflow-hidden border border-stone-200 shadow-sm">
+          <div className="rounded-3xl overflow-hidden border border-stone-200 shadow-sm">
             <MapContainer
               center={mapCenter}
               zoom={11}
               scrollWheelZoom
-              className="h-[320px] sm:h-[380px] w-full"
+              className="h-80 sm:h-96 w-full"
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

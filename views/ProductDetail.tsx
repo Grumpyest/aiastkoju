@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product, User, Review, UserRole, ReviewReply } from '../types';
 import { supabase } from '../supabaseClient';
+import StarRating from '../components/StarRating';
 
 interface ProductDetailProps {
   product: Product;
@@ -104,7 +105,7 @@ useEffect(() => {
 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
   <div className="space-y-4">
     <div
-      className="aspect-square sm:aspect-video rounded-[40px] overflow-hidden shadow-2xl bg-stone-100 cursor-zoom-in group relative border-4 border-white"
+      className="aspect-square sm:aspect-video rounded-3xl overflow-hidden shadow-2xl bg-stone-100 cursor-zoom-in group relative border-4 border-white"
       onClick={() => setIsGalleryOpen(true)}
     >
       <img
@@ -158,7 +159,7 @@ useEffect(() => {
     </p>
     <p className="text-stone-600 leading-relaxed text-lg mb-10">{product.description ?? ''}</p>
 
-    <div className="bg-white rounded-[40px] p-8 border border-stone-100 shadow-xl shadow-stone-200/50">
+    <div className="bg-white rounded-3xl p-8 border border-stone-100 shadow-xl shadow-stone-200/50">
       <div className="flex items-center justify-between mb-8">
         <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
         <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
@@ -181,7 +182,7 @@ useEffect(() => {
         <h2 className="text-3xl font-black text-stone-900 mb-8">Arvustused ja vastused</h2>
 
         {user ? (
-          <div className="bg-emerald-50 rounded-[32px] p-8 border border-emerald-100 shadow-sm mb-12">
+          <div className="bg-emerald-50 rounded-3xl p-8 border border-emerald-100 shadow-sm mb-12">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-2xl bg-white text-emerald-600 flex items-center justify-center shrink-0">
                 <i className="fa-solid fa-receipt"></i>
@@ -206,14 +207,7 @@ useEffect(() => {
                   <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm relative">
                     <div className="flex justify-between items-start mb-2">
                       <p className="font-black text-stone-900">{review.reviewerName || 'Kasutaja'}</p>
-                      <div className="flex text-yellow-400 text-[10px] gap-0.5">
-                        {[1,2,3,4,5].map(s => (
-                        <i
-                          key={s}
-                          className={`fa-solid fa-star ${s <= Number(review.rating || 0) ? 'text-yellow-400' : 'text-stone-100'}`}
-                        ></i>
-                        ))}
-                      </div>
+                      <StarRating rating={Number(review.rating || 0)} />
                     </div>
                     <p className="text-stone-600 text-lg leading-relaxed font-medium">"{review.comment}"</p>
                     {user && (
@@ -269,12 +263,12 @@ useEffect(() => {
       
       {isGalleryOpen && (
         <div 
-          className="fixed inset-0 z-[200] bg-stone-950/95 flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 z-50 bg-stone-950/95 flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setIsGalleryOpen(false)}
         >
            <button 
              onClick={(e) => { e.stopPropagation(); setIsGalleryOpen(false); }} 
-             className="absolute top-8 right-8 text-white/40 hover:text-white text-4xl transition-all z-[210]"
+             className="absolute top-8 right-8 text-white/40 hover:text-white text-4xl transition-all z-50"
            >
              <i className="fa-solid fa-xmark"></i>
            </button>

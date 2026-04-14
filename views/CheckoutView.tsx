@@ -246,9 +246,9 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
         <i className="fa-solid fa-arrow-left"></i> Tagasi kataloogi
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(380px,1fr)] xl:grid-cols-[minmax(0,1.6fr)_minmax(420px,1fr)] gap-12 items-start">
-        <div className="order-1 lg:order-2 space-y-8">
-          <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-stone-100 shadow-sm lg:sticky lg:top-24">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
+        <div className="order-1 lg:order-2 lg:col-span-2 space-y-8">
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-stone-100 shadow-sm lg:sticky lg:top-24">
             <h3 className="text-lg font-bold text-stone-900 mb-6 border-b border-stone-50 pb-4">Ostukorvi kokkuvõte</h3>
 
             {distanceError && (
@@ -412,8 +412,8 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
           </div>
         </div>
 
-        <div className="order-2 lg:order-1 space-y-8">
-          <div className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm">
+        <div className="order-2 lg:order-1 lg:col-span-3 space-y-8">
+          <div className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm">
             <h2 className="text-2xl font-black text-stone-900 mb-8 flex items-center gap-3">
               <i className="fa-solid fa-truck-fast text-emerald-600"></i> Tellimuse andmed
             </h2>
@@ -508,7 +508,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
               <button
                 type="submit"
                 disabled={isSubmittingPayment}
-                className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-xl shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
+                className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
               >
                 {isSubmittingPayment ? 'Suuname maksele...' : 'Maksa ja esita tellimus'}
               </button>

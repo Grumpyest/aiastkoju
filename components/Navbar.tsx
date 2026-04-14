@@ -254,8 +254,8 @@ const handleRegister = async (e: React.FormEvent) => {
 
               {isCartOpen && (
                 <>
-                  <div className="fixed inset-0 z-[45] bg-transparent" onClick={() => setIsCartOpen(false)}></div>
-                  <div className="fixed left-3 right-3 top-24 z-[60] max-h-[calc(100svh-7rem)] bg-white shadow-2xl rounded-[28px] border border-stone-100 overflow-hidden animate-fade-in flex flex-col md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-80 md:max-h-none md:rounded-2xl">
+                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsCartOpen(false)}></div>
+                  <div className="fixed left-3 right-3 top-24 z-50 max-h-[calc(100svh-7rem)] bg-white shadow-2xl rounded-3xl border border-stone-100 overflow-hidden animate-fade-in flex flex-col md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-80 md:max-h-none md:rounded-2xl">
                     <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
                       <h3 className="font-bold text-stone-900 text-xs uppercase tracking-widest">Ostukorv</h3>
                       <button onClick={() => setIsCartOpen(false)} className="text-stone-400 hover:text-stone-600"><i className="fa-solid fa-xmark"></i></button>
@@ -326,9 +326,9 @@ const handleRegister = async (e: React.FormEvent) => {
       </div>
 
       {/* Side Menu Drawer for Mobile */}
-      <div className={`fixed inset-0 z-[100] transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
-        <div className={`absolute top-0 right-0 h-full w-[280px] bg-white shadow-2xl transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`absolute top-0 right-0 h-full w-72 bg-white shadow-2xl transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="p-6 flex justify-between items-center border-b border-stone-100">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs">
@@ -373,8 +373,8 @@ const handleRegister = async (e: React.FormEvent) => {
 
       {/* Auth Modal - Login & Register */}
       {authModal !== 'none' && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] p-8 max-md w-full shadow-2xl relative animate-fade-in overflow-y-auto max-h-[90vh]">
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-md w-full shadow-2xl relative animate-fade-in overflow-y-auto max-h-[90vh]">
             <button onClick={() => setAuthModal('none')} className="absolute top-6 right-6 text-stone-300 hover:text-stone-500 text-xl"><i className="fa-solid fa-xmark"></i></button>
             
             {authModal === 'login' ? (

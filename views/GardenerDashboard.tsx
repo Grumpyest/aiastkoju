@@ -820,25 +820,25 @@ const handleSaveEdit = async (e: React.FormEvent) => {
       {activeTab === 'stats' && (
         <div className="space-y-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-[32px] border border-stone-100 shadow-sm">
+            <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Käive</p>
               <h3 className="text-2xl font-black text-emerald-700">{totalRevenue.toFixed(2)}€</h3>
             </div>
-            <div className="bg-white p-6 rounded-[32px] border border-stone-100 shadow-sm">
+            <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Uusi tellimusi</p>
               <h3 className="text-2xl font-black text-amber-600">{pendingOrdersCount}</h3>
             </div>
-            <div className="bg-white p-6 rounded-[32px] border border-stone-100 shadow-sm">
+            <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Tooteid</p>
               <h3 className="text-2xl font-black text-stone-900">{myProducts.length}</h3>
             </div>
-            <div className="bg-white p-6 rounded-[32px] border border-stone-100 shadow-sm">
+            <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Arvustusi</p>
               <h3 className="text-2xl font-black text-stone-900">{myReviews.length}</h3>
             </div>
           </div>
           
-          <div className="bg-white p-6 md:p-8 rounded-[40px] border border-stone-100 shadow-sm">
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-stone-100 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="flex items-start gap-4">
                 <div className={`w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm ${
@@ -882,7 +882,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[40px] border border-stone-100 shadow-sm">
+          <div className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm">
             <h3 className="text-lg font-bold text-stone-900 mb-8 uppercase tracking-widest text-xs">Müük toote lõikes (€)</h3>
             <div className="h-64 w-full">
               {chartData.length > 0 ? (
@@ -925,12 +925,12 @@ const handleSaveEdit = async (e: React.FormEvent) => {
       {activeTab === 'products' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {myProducts.length === 0 ? (
-            <div className="col-span-full py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-stone-100">
+            <div className="col-span-full py-24 text-center bg-white rounded-3xl border-2 border-dashed border-stone-100">
                <i className="fa-solid fa-seedling text-4xl text-stone-200 mb-4"></i>
                <p className="text-stone-400 font-bold">Sul pole veel ühtegi toodet müügis.</p>
             </div>
           ) : myProducts.map(p => (
-            <div key={p.id} className="bg-white rounded-[32px] border border-stone-100 shadow-sm overflow-hidden group">
+            <div key={p.id} className="bg-white rounded-3xl border border-stone-100 shadow-sm overflow-hidden group">
                <div className="h-48 relative overflow-hidden">
                  <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                  <div className="absolute top-4 right-4 flex gap-2">
@@ -985,12 +985,12 @@ const handleSaveEdit = async (e: React.FormEvent) => {
       {activeTab === 'orders' && (
         <div className="space-y-6">
           {myOrders.length === 0 ? (
-            <div className="py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-stone-100">
+            <div className="py-24 text-center bg-white rounded-3xl border-2 border-dashed border-stone-100">
                <i className="fa-solid fa-receipt text-4xl text-stone-200 mb-4"></i>
                <p className="text-stone-400 font-bold">Sul pole veel ühtegi tellimust.</p>
             </div>
           ) : myOrders.map(order => (
-            <div key={order.id} className="bg-white rounded-[32px] border border-stone-100 shadow-sm overflow-hidden">
+            <div key={order.id} className="bg-white rounded-3xl border border-stone-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-stone-50 flex flex-wrap justify-between items-center gap-4 bg-stone-50/30">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-stone-400 border border-stone-100 shadow-sm">
@@ -1073,14 +1073,14 @@ const handleSaveEdit = async (e: React.FormEvent) => {
       {activeTab === 'reviews' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {myReviews.length === 0 ? (
-            <div className="col-span-full py-24 text-center bg-white rounded-[40px] border-2 border-dashed border-stone-100">
+            <div className="col-span-full py-24 text-center bg-white rounded-3xl border-2 border-dashed border-stone-100">
                <i className="fa-solid fa-star text-4xl text-stone-200 mb-4"></i>
                <p className="text-stone-400 font-bold">Sinule pole veel arvustusi jäetud.</p>
             </div>
           ) : myReviews.map(review => {
             const product = products.find(p => p.id === review.productId);
             return (
-              <div key={review.id} className="bg-white p-8 rounded-[32px] border border-stone-100 shadow-sm flex gap-6">
+              <div key={review.id} className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm flex gap-6">
                 <img src={`https://i.pravatar.cc/150?u=${review.userId}`} className="w-16 h-16 rounded-2xl shadow-sm border border-stone-50" />
                 <div className="flex-grow">
                   <div className="flex justify-between items-start mb-2">
@@ -1103,8 +1103,8 @@ const handleSaveEdit = async (e: React.FormEvent) => {
 
       {/* Add Product Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[110] bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-fade-in relative my-auto">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl animate-fade-in relative my-auto">
             <div className="p-8 border-b border-stone-50 flex justify-between items-center">
               <h2 className="text-2xl font-black text-stone-900">Lisa uus toode</h2>
               <button onClick={closeAddModal} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
@@ -1169,7 +1169,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   <textarea required rows={3} value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none" />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-lg shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95">Lisa toode poodi</button>
+              <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95">Lisa toode poodi</button>
             </form>
           </div>
         </div>
@@ -1177,8 +1177,8 @@ const handleSaveEdit = async (e: React.FormEvent) => {
 
       {/* Edit Product Modal */}
       {isEditModalOpen && editingProduct && (
-        <div className="fixed inset-0 z-[110] bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-fade-in relative my-auto">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl animate-fade-in relative my-auto">
             <div className="p-8 border-b border-stone-50 flex justify-between items-center">
               <h2 className="text-2xl font-black text-stone-900">Muuda toodet</h2>
               <button onClick={closeEditModal} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
@@ -1243,7 +1243,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   <textarea required rows={4} value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none" />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-lg shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95">Salvesta muudatused</button>
+              <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95">Salvesta muudatused</button>
             </form>
           </div>
         </div>
@@ -1251,14 +1251,14 @@ const handleSaveEdit = async (e: React.FormEvent) => {
 
       {isPayoutModalOpen && (
         <div
-          className="fixed inset-0 z-[120] bg-stone-950/55 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               closePayoutModal();
             }
           }}
         >
-          <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl animate-fade-in my-auto overflow-hidden">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl animate-fade-in my-auto overflow-hidden">
             <div className="p-6 md:p-8 border-b border-stone-100 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-2">Aedniku väljamakse</p>
@@ -1303,7 +1303,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 </div>
               )}
 
-              <div ref={payoutOnboardingRef} className="min-h-[420px] rounded-[28px] bg-white p-2 md:p-4 shadow-sm" />
+              <div ref={payoutOnboardingRef} className="min-h-96 rounded-3xl bg-white p-2 md:p-4 shadow-sm" />
             </div>
           </div>
         </div>

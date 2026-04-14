@@ -350,7 +350,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             <button
               type="button"
               onClick={resetFilters}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-stone-500 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-xs font-black uppercase tracking-widest text-stone-500 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
             >
               <i className="fa-solid fa-rotate-left text-emerald-600"></i>
               Lähtesta filtrid
@@ -359,12 +359,12 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             <button
               type="button"
               onClick={() => setIsLocationModalOpen(true)}
-              className="w-full rounded-[28px] bg-gradient-to-br from-white via-emerald-50/40 to-stone-50 text-left text-stone-900 p-5 border border-stone-200 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
+              className="w-full rounded-3xl bg-gradient-to-br from-white via-emerald-50/40 to-stone-50 text-left text-stone-900 p-5 border border-stone-200 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-2">Asukohapõhine otsing</p>
-                  <h3 className="text-[24px] leading-[1.05] font-black text-stone-900">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">Asukohapõhine otsing</p>
+                  <h3 className="text-2xl leading-tight font-black text-stone-900">
                     {locationFilter.location ? locationFilter.location.label : 'Vali asukoht, et otsida lähedalt'}
                   </h3>
                   <p className="text-sm text-stone-500 mt-4 max-w-[24ch]">
@@ -398,7 +398,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
               </div>
             </button>
 
-            <div className="rounded-[28px] bg-white border border-stone-200 shadow-sm p-5 space-y-6">
+            <div className="rounded-3xl bg-white border border-stone-200 shadow-sm p-5 space-y-6">
               {renderCategorySection()}
               {renderFilterControls()}
             </div>
@@ -417,7 +417,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                   <i className="fa-solid fa-map-location-dot"></i>
                 </div>
                 <div className="min-w-0">
-                  <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-[0.22em] mb-1">Asukoht</span>
+                  <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Asukoht</span>
                   <span className="block font-bold text-stone-900 truncate">{locationButtonLabel}</span>
                   <span className="block text-xs text-stone-500 mt-1 truncate">{locationButtonHelper}</span>
                 </div>
@@ -511,7 +511,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           )}
 
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-24 bg-stone-50 rounded-[40px] border-2 border-dashed border-stone-200">
+            <div className="text-center py-24 bg-stone-50 rounded-3xl border-2 border-dashed border-stone-200">
               <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-6 text-stone-300 text-3xl">
                 <i className="fa-solid fa-seedling"></i>
               </div>
@@ -530,7 +530,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                 return (
                   <div
                     key={product.id}
-                    className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-stone-100 hover:shadow-xl transition-all flex flex-col group"
+                    className="bg-white rounded-3xl overflow-hidden shadow-sm border border-stone-100 hover:shadow-xl transition-all flex flex-col group"
                   >
                     <div
                       className="relative h-56 overflow-hidden cursor-pointer"
@@ -631,18 +631,18 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       </div>
 
       {isMobileFiltersOpen && (
-        <div className="fixed inset-0 z-[130] md:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
             aria-label="Sulge filtrid"
             onClick={() => setIsMobileFiltersOpen(false)}
-            className="fixed inset-0 bg-stone-900/35 backdrop-blur-sm"
+            className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm"
           ></button>
 
-          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[85vh] overflow-y-auto rounded-t-[32px] border-t border-stone-200 bg-white shadow-2xl overscroll-contain">
+          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-stone-200 bg-white shadow-2xl overscroll-contain">
             <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 mb-1">Filtrid</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-1">Filtrid</p>
                 <h3 className="text-lg font-black text-stone-900">
                   {mobilePanelView === 'categories' ? 'Kategooriad' : 'Filtrid'}
                 </h3>

@@ -138,7 +138,6 @@ const App: React.FC = () => {
 
   const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -155,8 +154,6 @@ const App: React.FC = () => {
     if (payment === 'success') {
       setCart([]);
       setCurrentView(user ? 'orders' : 'catalog');
-      setOrdersRefreshKey(key => key + 1);
-      window.setTimeout(() => setOrdersRefreshKey(key => key + 1), 2500);
       showToast('Makse õnnestus! Tellimus edastati müüjale.', 'success');
     } else if (payment === 'cancelled') {
       showToast('Makse katkestati. Ostukorv jäi alles.', 'error');
@@ -343,12 +340,7 @@ const App: React.FC = () => {
         return;
       }
 
-      const visibleOrderRows = (orderRows || []).filter((orderRow: any) => {
-        const paymentStatus = String(orderRow.payment_status || '').toLowerCase();
-        return !['pending', 'cancelled', 'failed'].includes(paymentStatus);
-      });
-
-      const sellerIds = [...new Set(visibleOrderRows.map((orderRow: any) => String(orderRow.seller_id)).filter(Boolean))];
+      const sellerIds = [...new Set((orderRows || []).map((orderRow: any) => String(orderRow.seller_id)).filter(Boolean))];
       const sellersById = await loadSellerProfileSummaries(sellerIds);
 
       const productById = new Map(products.map(product => [String(product.id), product]));
@@ -369,7 +361,7 @@ const App: React.FC = () => {
         itemsByOrderId.set(orderId, existingItems);
       }
 
-      const mapped: Order[] = visibleOrderRows.map((orderRow: any) => {
+      const mapped: Order[] = (orderRows || []).map((orderRow: any) => {
         const seller = sellersById.get(String(orderRow.seller_id));
 
         return {
@@ -399,7 +391,7 @@ const App: React.FC = () => {
     } else {
       setOrders([]);
     }
-  }, [products, user, ordersRefreshKey]);
+  }, [products, user]);
 
   useEffect(() => {
     const loadReviews = async () => {
@@ -778,7 +770,7 @@ const App: React.FC = () => {
       <main className="flex-grow">{renderView()}</main>
 
       {toast && (
-        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border-2 animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-red-50 border-red-500 text-red-800'}`}>
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border-2 animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-red-50 border-red-500 text-red-800'}`}>
           <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}`}></i>
           <span className="font-bold text-sm">{toast.message}</span>
         </div>
@@ -819,13 +811,13 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-stone-800 text-center opacity-40 text-[10px] uppercase tracking-[0.2em]">
+        <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-stone-800 text-center opacity-40 text-[10px] uppercase tracking-widest">
           &copy; {new Date().getFullYear()} Aiast Koju Platvorm. Kõik õigused kaitstud.
         </div>
       </footer>
 
       {legalModal !== 'none' && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl max-h-[80vh] overflow-y-auto relative">
             <button onClick={() => setLegalModal('none')} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900"><i className="fa-solid fa-xmark text-xl"></i></button>
             {legalModal === 'about' && (
