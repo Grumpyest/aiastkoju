@@ -1,9 +1,10 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { User, Product, Order, OrderStatus, ProductStatus, Review } from '../types';
 import { CATEGORIES, UNITS } from '../constants';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, YAxis } from 'recharts';
 import { supabase } from '../supabaseClient';
+import { getPaymentProfile, PaymentProfileSummary, redirectToPaymentFunction } from '../utils/payments';
 
 interface GardenerDashboardProps {
   user: User;
@@ -31,6 +32,8 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const [editMainImageFile, setEditMainImageFile] = useState<File | null>(null);
   const [editExtraImageFiles, setEditExtraImageFiles] = useState<File[]>([]);
   const [removedEditImageUrls, setRemovedEditImageUrls] = useState<string[]>([]);
+  const [paymentProfile, setPaymentProfile] = useState<PaymentProfileSummary | null>(null);
+  const [paymentAction, setPaymentAction] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const extraFileInputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +60,58 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const totalRevenue = myOrders.filter(o => o.status === OrderStatus.COMPLETED).reduce((acc, curr) => acc + curr.total, 0);
   const pendingOrdersCount = myOrders.filter(o => o.status === OrderStatus.NEW).length;
   const inProgressOrdersCount = myOrders.filter(o => o.status === OrderStatus.CONFIRMED).length;
+  const payoutStatus = paymentProfile?.connect?.payoutsEnabled
+    ? 'ready'
+    : paymentProfile?.connect?.detailsSubmitted
+    ? 'review'
+    : 'missing';
+  const payoutLabel = payoutStatus === 'ready'
+    ? 'Valmis väljamakseteks'
+    : payoutStatus === 'review'
+    ? 'Stripe kontrollib kontot'
+    : 'Väljamakse konto puudub';
+  const payoutDescription = payoutStatus === 'ready'
+    ? 'Ostude raha saab liikuda sinu ühendatud väljamakse kontole.'
+    : payoutStatus === 'review'
+    ? 'Stripe kontrollib sisestatud andmeid. Kui kontroll on valmis, aktiveeruvad väljamaksed.'
+    : 'Ühenda Stripe väljamakse konto, et ostude raha sinuni jõuaks.';
+  const payoutMethodLabel = paymentProfile?.payoutMethod?.last4
+    ? `${paymentProfile.payoutMethod.brand || 'Konto'} ****${paymentProfile.payoutMethod.last4}`
+    : 'Kontot pole veel ühendatud';
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadPaymentProfile = async () => {
+      try {
+        const profile = await getPaymentProfile();
+
+        if (!isCancelled) {
+          setPaymentProfile(profile);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.warn('Gardener payment profile load failed', error);
+        }
+      }
+    };
+
+    loadPaymentProfile();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const startPayoutSetup = async () => {
+    try {
+      setPaymentAction('connect');
+      await redirectToPaymentFunction('payments-create-connect-link');
+    } catch (error: any) {
+      onNotify?.(error?.message || 'Väljamakse konto avamine ebaõnnestus.', 'error');
+      setPaymentAction(null);
+    }
+  };
 
   const chartData = useMemo(() => {
   return myProducts
@@ -601,6 +656,40 @@ const handleSaveEdit = async (e: React.FormEvent) => {
             </div>
           </div>
           
+          <div className="bg-white p-6 md:p-8 rounded-[40px] border border-stone-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className={`w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm ${
+                  payoutStatus === 'ready' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                }`}>
+                  <i className="fa-solid fa-building-columns text-xl"></i>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Aedniku väljamakse</p>
+                  <h3 className="text-xl font-black text-stone-900">{payoutLabel}</h3>
+                  <p className="text-sm text-stone-500 mt-2 max-w-xl">{payoutDescription}</p>
+                  <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-stone-50 px-3 py-1.5 text-xs font-bold text-stone-600">
+                    <i className="fa-solid fa-lock text-emerald-600"></i>
+                    {payoutMethodLabel}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={startPayoutSetup}
+                disabled={paymentAction === 'connect'}
+                className="w-full lg:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-4 rounded-2xl font-black shadow-lg shadow-emerald-600/15 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {paymentAction === 'connect'
+                  ? 'Avame Stripe...'
+                  : paymentProfile?.connect?.accountId
+                  ? 'Halda väljamakse kontot'
+                  : 'Ühenda väljamakse konto'}
+              </button>
+            </div>
+          </div>
+
           <div className="bg-white p-8 rounded-[40px] border border-stone-100 shadow-sm">
             <h3 className="text-lg font-bold text-stone-900 mb-8 uppercase tracking-widest text-xs">Müük toote lõikes (€)</h3>
             <div className="h-64 w-full">

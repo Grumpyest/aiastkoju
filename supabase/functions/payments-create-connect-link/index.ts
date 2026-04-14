@@ -62,10 +62,10 @@ Deno.serve(async (req) => {
     const message = error instanceof Error ? error.message : 'Stripe konto ühendamise linki ei saanud luua.';
 
     if (message.includes('signed up for Connect')) {
-      return errorResponse(
-        'Stripe Connect ei ole sinu Stripe kontol veel aktiveeritud. Ava Stripe Dashboardis Connect seadistus ja proovi siis uuesti.',
-        400,
-      );
+      return jsonResponse({
+        error: 'Stripe Connect ei ole platvormi Stripe kontol veel lõpuni aktiveeritud. Ava Stripe Dashboardis Connect seadistus ja proovi siis uuesti.',
+        setupUrl: 'https://dashboard.stripe.com/connect',
+      });
     }
 
     return errorResponse(message, 400);
