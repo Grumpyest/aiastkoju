@@ -45,6 +45,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const editExtraFileInputRef = useRef<HTMLInputElement>(null);
   const payoutOnboardingRef = useRef<HTMLDivElement>(null);
   const connectInstanceRef = useRef<ReturnType<typeof loadConnectAndInitialize> | null>(null);
+  const onNotifyRef = useRef(onNotify);
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
     title: '',
@@ -90,6 +91,10 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     setPaymentProfile(profile);
     return profile;
   };
+
+  useEffect(() => {
+    onNotifyRef.current = onNotify;
+  }, [onNotify]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -167,7 +172,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
 
         const onboarding = connectInstance.create('account-onboarding');
         onboarding.setOnExit(async () => {
-          onNotify?.('Väljamakse konto seadistus salvestatud.', 'success');
+          onNotifyRef.current?.('Väljamakse konto seadistus salvestatud.', 'success');
           setIsPayoutModalOpen(false);
 
           try {
@@ -186,7 +191,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
         if (!isCancelled) {
           const message = error?.message || 'Väljamakse konto seadistust ei saanud avada.';
           setPayoutOnboardingError(message);
-          onNotify?.(message, 'error');
+          onNotifyRef.current?.(message, 'error');
         }
       } finally {
         if (!isCancelled) {
@@ -204,7 +209,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
       connectInstanceRef.current?.logout().catch(() => undefined);
       connectInstanceRef.current = null;
     };
-  }, [isPayoutModalOpen, onNotify]);
+  }, [isPayoutModalOpen]);
 
   const closePayoutModal = async () => {
     setIsPayoutModalOpen(false);

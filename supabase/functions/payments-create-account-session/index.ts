@@ -69,7 +69,6 @@ Deno.serve(async (req) => {
         .eq('id', user.id);
     } else {
       await stripe.accounts.update(accountId, {
-        email: normalizeOptionalEmail(profile.email || user.email),
         business_profile: getBusinessProfile(siteUrl, profile.email || user.email),
       });
     }
