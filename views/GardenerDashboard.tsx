@@ -188,6 +188,13 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
         connectInstanceRef.current = connectInstance;
 
         const onboarding = connectInstance.create('account-onboarding');
+        onboarding.setCollectionOptions({
+          fields: 'currently_due',
+          futureRequirements: 'omit',
+          requirements: {
+            exclude: ['business_profile.*'],
+          },
+        });
         onboarding.setOnExit(async () => {
           onNotifyRef.current?.('Väljamakse konto seadistus salvestatud.', 'success');
           setIsPayoutModalOpen(false);
