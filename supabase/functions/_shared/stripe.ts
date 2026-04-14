@@ -31,7 +31,17 @@ export const PLATFORM_FEE_CENTS = Math.max(
   Number(Deno.env.get('STRIPE_PLATFORM_FEE_CENTS') ?? '12')
 );
 
-export const MARKETPLACE_CURRENCY = (Deno.env.get('STRIPE_CURRENCY') || 'eur').toLowerCase();
+const normalizeCurrency = (value?: string | null) => {
+  const normalized = (value || 'eur').trim().toLowerCase();
+
+  if (normalized === '€' || normalized === 'euro') {
+    return 'eur';
+  }
+
+  return /^[a-z]{3}$/.test(normalized) ? normalized : 'eur';
+};
+
+export const MARKETPLACE_CURRENCY = normalizeCurrency(Deno.env.get('STRIPE_CURRENCY'));
 
 export const isValidEmail = (email?: string | null) => {
   if (!email) {
@@ -50,25 +60,50 @@ export const normalizeOptionalEmail = (email?: string | null) => {
 };
 
 const toAbsoluteSiteUrl = (value?: string | null) => {
-  const trimmed = value?.trim();
+  const trimmed = value?.trim().replace(/^['"]|['"]$/g, '');
 
   if (!trimmed) {
     return null;
   }
 
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const firstUrl = trimmed.split(',')[0]?.trim() || '';
+
+  if (!firstUrl) {
+    return null;
+  }
+
+  const withProtocol = /^https?:\/\//i.test(firstUrl) ? firstUrl : `https://${firstUrl}`;
 
   try {
-    return new URL(withProtocol).origin;
+    const url = new URL(withProtocol);
+
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname.includes('.')) {
+      return null;
+    }
+
+    return url.origin;
   } catch {
     return null;
   }
 };
 
-export const getSiteUrl = (req: Request) => {
+export const getSiteUrl = (req: Request, fallbackUrl?: string | null) => {
   const configuredUrl = toAbsoluteSiteUrl(Deno.env.get('SITE_URL'));
+  const bodyUrl = toAbsoluteSiteUrl(fallbackUrl);
   const origin = toAbsoluteSiteUrl(req.headers.get('origin'));
-  return configuredUrl || origin || 'http://localhost:5173';
+  return configuredUrl || bodyUrl || origin || 'https://aiastkoju.vercel.app';
+};
+
+export const buildSiteCallbackUrl = (siteUrl: string, params: Record<string, string>) => {
+  const url = new URL(siteUrl);
+  url.pathname = '/';
+  url.search = '';
+
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+
+  return url.toString();
 };
 
 export const getRequestUser = async (req: Request) => {

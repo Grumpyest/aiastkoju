@@ -1,6 +1,7 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
 import {
   assertPaymentEnv,
+  buildSiteCallbackUrl,
   getRequestUser,
   getSiteUrl,
   isValidEmail,
@@ -23,6 +24,12 @@ interface BuyerInput {
   notes?: string;
 }
 
+interface CheckoutRequestBody {
+  buyer?: BuyerInput;
+  items?: CheckoutItemInput[];
+  siteUrl?: string;
+}
+
 const toUuid = () => crypto.randomUUID();
 
 Deno.serve(async (req) => {
@@ -34,8 +41,10 @@ Deno.serve(async (req) => {
     assertPaymentEnv();
 
     const user = await getRequestUser(req);
-    const siteUrl = getSiteUrl(req);
-    const body = await req.json();
+    const body = await req.json() as CheckoutRequestBody;
+    const siteUrl = getSiteUrl(req, body?.siteUrl);
+    const successUrl = buildSiteCallbackUrl(siteUrl, { payment: 'success' });
+    const cancelUrl = buildSiteCallbackUrl(siteUrl, { payment: 'cancelled' });
     const buyer = body?.buyer as BuyerInput;
     const items = Array.isArray(body?.items) ? body.items as CheckoutItemInput[] : [];
 
@@ -180,6 +189,8 @@ Deno.serve(async (req) => {
       createdOrderIds.push(orderId);
     }
 
+    const platformFeeTotalCents = PLATFORM_FEE_CENTS * groupedBySeller.size;
+
     let customerId: string | undefined;
 
     if (user) {
@@ -249,16 +260,23 @@ Deno.serve(async (req) => {
         metadata: {
           order_ids: createdOrderIds.join(','),
           buyer_id: user?.id || '',
+          platform_fee_cents: String(platformFeeTotalCents),
         },
       },
       metadata: {
         purpose: 'marketplace_order',
         order_ids: createdOrderIds.join(','),
         buyer_id: user?.id || '',
+        platform_fee_cents: String(platformFeeTotalCents),
+        seller_order_count: String(groupedBySeller.size),
       },
-      success_url: `${siteUrl}/?payment=success`,
-      cancel_url: `${siteUrl}/?payment=cancelled`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
+
+    if (!session.url) {
+      throw new Error('Stripe makselinki ei saanud luua.');
+    }
 
     await supabaseAdmin
       .from('orders')

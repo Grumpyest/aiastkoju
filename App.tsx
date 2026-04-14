@@ -138,6 +138,7 @@ const App: React.FC = () => {
 
   const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -154,6 +155,8 @@ const App: React.FC = () => {
     if (payment === 'success') {
       setCart([]);
       setCurrentView(user ? 'orders' : 'catalog');
+      setOrdersRefreshKey(key => key + 1);
+      window.setTimeout(() => setOrdersRefreshKey(key => key + 1), 2500);
       showToast('Makse õnnestus! Tellimus edastati müüjale.', 'success');
     } else if (payment === 'cancelled') {
       showToast('Makse katkestati. Ostukorv jäi alles.', 'error');
@@ -340,7 +343,12 @@ const App: React.FC = () => {
         return;
       }
 
-      const sellerIds = [...new Set((orderRows || []).map((orderRow: any) => String(orderRow.seller_id)).filter(Boolean))];
+      const visibleOrderRows = (orderRows || []).filter((orderRow: any) => {
+        const paymentStatus = String(orderRow.payment_status || '').toLowerCase();
+        return !['pending', 'cancelled', 'failed'].includes(paymentStatus);
+      });
+
+      const sellerIds = [...new Set(visibleOrderRows.map((orderRow: any) => String(orderRow.seller_id)).filter(Boolean))];
       const sellersById = await loadSellerProfileSummaries(sellerIds);
 
       const productById = new Map(products.map(product => [String(product.id), product]));
@@ -361,7 +369,7 @@ const App: React.FC = () => {
         itemsByOrderId.set(orderId, existingItems);
       }
 
-      const mapped: Order[] = (orderRows || []).map((orderRow: any) => {
+      const mapped: Order[] = visibleOrderRows.map((orderRow: any) => {
         const seller = sellersById.get(String(orderRow.seller_id));
 
         return {
@@ -391,7 +399,7 @@ const App: React.FC = () => {
     } else {
       setOrders([]);
     }
-  }, [products, user]);
+  }, [products, user, ordersRefreshKey]);
 
   useEffect(() => {
     const loadReviews = async () => {

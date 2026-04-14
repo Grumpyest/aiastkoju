@@ -218,6 +218,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
       setIsSubmittingPayment(true);
 
       await redirectToPaymentFunction('payments-create-checkout', {
+        siteUrl: window.location.origin,
         buyer: {
           name: formData.name.trim(),
           email: formData.email.trim(),
