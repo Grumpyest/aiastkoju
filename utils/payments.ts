@@ -25,6 +25,13 @@ export interface PaymentProfileSummary {
   };
 }
 
+export interface ConnectAccountSessionSummary {
+  clientSecret?: string;
+  publishableKey?: string;
+  error?: string;
+  setupUrl?: string;
+}
+
 export const maskLast4 = (last4?: string | null) => {
   if (!last4) {
     return 'Kaarti pole salvestatud';
@@ -67,6 +74,26 @@ const getFunctionErrorMessage = async (error: any) => {
   }
 
   return fallback;
+};
+
+export const createConnectAccountSession = async () => {
+  const { data, error } = await supabase.functions.invoke<ConnectAccountSessionSummary>(
+    'payments-create-account-session'
+  );
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  if (!data?.clientSecret || !data?.publishableKey) {
+    throw new Error('Stripe väljamakse seadistust ei saanud avada.');
+  }
+
+  return data;
 };
 
 export const redirectToPaymentFunction = async (

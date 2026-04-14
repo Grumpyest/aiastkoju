@@ -4,7 +4,8 @@ import { User, Product, Order, OrderStatus, ProductStatus, Review } from '../typ
 import { CATEGORIES, UNITS } from '../constants';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, YAxis } from 'recharts';
 import { supabase } from '../supabaseClient';
-import { getPaymentProfile, PaymentProfileSummary, redirectToPaymentFunction } from '../utils/payments';
+import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
+import { createConnectAccountSession, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
 
 interface GardenerDashboardProps {
   user: User;
@@ -34,11 +35,16 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const [removedEditImageUrls, setRemovedEditImageUrls] = useState<string[]>([]);
   const [paymentProfile, setPaymentProfile] = useState<PaymentProfileSummary | null>(null);
   const [paymentAction, setPaymentAction] = useState<string | null>(null);
+  const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
+  const [isPayoutOnboardingLoading, setIsPayoutOnboardingLoading] = useState(false);
+  const [payoutOnboardingError, setPayoutOnboardingError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const extraFileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const editExtraFileInputRef = useRef<HTMLInputElement>(null);
+  const payoutOnboardingRef = useRef<HTMLDivElement>(null);
+  const connectInstanceRef = useRef<ReturnType<typeof loadConnectAndInitialize> | null>(null);
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
     title: '',
@@ -79,6 +85,12 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     ? `${paymentProfile.payoutMethod.brand || 'Konto'} ****${paymentProfile.payoutMethod.last4}`
     : 'Kontot pole veel ühendatud';
 
+  const refreshPaymentProfile = async () => {
+    const profile = await getPaymentProfile();
+    setPaymentProfile(profile);
+    return profile;
+  };
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -103,10 +115,114 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isPayoutModalOpen || !payoutOnboardingRef.current) {
+      return;
+    }
+
+    let isCancelled = false;
+    let mountedElement: HTMLElement | null = null;
+    let initialClientSecret: string | undefined;
+
+    const loadEmbeddedOnboarding = async () => {
+      try {
+        setIsPayoutOnboardingLoading(true);
+        setPayoutOnboardingError(null);
+
+        const firstSession = await createConnectAccountSession();
+        initialClientSecret = firstSession.clientSecret;
+
+        const fetchClientSecret = async () => {
+          if (initialClientSecret) {
+            const secret = initialClientSecret;
+            initialClientSecret = undefined;
+            return secret;
+          }
+
+          const nextSession = await createConnectAccountSession();
+          return nextSession.clientSecret!;
+        };
+
+        if (isCancelled) {
+          return;
+        }
+
+        const connectInstance = loadConnectAndInitialize({
+          publishableKey: firstSession.publishableKey!,
+          fetchClientSecret,
+          locale: navigator.language || 'et-EE',
+          appearance: {
+            variables: {
+              colorPrimary: '#059669',
+              colorText: '#1c1917',
+              colorBackground: '#ffffff',
+              borderRadius: '16px',
+              buttonBorderRadius: '16px',
+              fontFamily: 'inherit',
+            },
+          },
+        });
+
+        connectInstanceRef.current = connectInstance;
+
+        const onboarding = connectInstance.create('account-onboarding');
+        onboarding.setOnExit(async () => {
+          onNotify?.('Väljamakse konto seadistus salvestatud.', 'success');
+          setIsPayoutModalOpen(false);
+
+          try {
+            await refreshPaymentProfile();
+          } catch (error) {
+            console.warn('Payment profile refresh failed after onboarding exit', error);
+          }
+        });
+        onboarding.setOnLoadError(({ error }) => {
+          setPayoutOnboardingError(error?.message || 'Stripe seadistusvaadet ei saanud laadida.');
+        });
+
+        mountedElement = onboarding;
+        payoutOnboardingRef.current!.replaceChildren(onboarding);
+      } catch (error: any) {
+        if (!isCancelled) {
+          const message = error?.message || 'Väljamakse konto seadistust ei saanud avada.';
+          setPayoutOnboardingError(message);
+          onNotify?.(message, 'error');
+        }
+      } finally {
+        if (!isCancelled) {
+          setPaymentAction(null);
+          setIsPayoutOnboardingLoading(false);
+        }
+      }
+    };
+
+    loadEmbeddedOnboarding();
+
+    return () => {
+      isCancelled = true;
+      mountedElement?.remove();
+      connectInstanceRef.current?.logout().catch(() => undefined);
+      connectInstanceRef.current = null;
+    };
+  }, [isPayoutModalOpen, onNotify]);
+
+  const closePayoutModal = async () => {
+    setIsPayoutModalOpen(false);
+    setPayoutOnboardingError(null);
+    setPaymentAction(null);
+
+    try {
+      await refreshPaymentProfile();
+    } catch (error) {
+      console.warn('Payment profile refresh failed after closing onboarding modal', error);
+    }
+  };
+
   const startPayoutSetup = async () => {
     try {
       setPaymentAction('connect');
-      await redirectToPaymentFunction('payments-create-connect-link');
+      setPayoutOnboardingError(null);
+      setIsPayoutModalOpen(true);
     } catch (error: any) {
       onNotify?.(error?.message || 'Väljamakse konto avamine ebaõnnestus.', 'error');
       setPaymentAction(null);
@@ -1053,6 +1169,66 @@ const handleSaveEdit = async (e: React.FormEvent) => {
               </div>
               <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-lg shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95">Salvesta muudatused</button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isPayoutModalOpen && (
+        <div
+          className="fixed inset-0 z-[120] bg-stone-950/55 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closePayoutModal();
+            }
+          }}
+        >
+          <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl animate-fade-in my-auto overflow-hidden">
+            <div className="p-6 md:p-8 border-b border-stone-100 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-2">Aedniku väljamakse</p>
+                <h2 className="text-2xl font-black text-stone-900">Ühenda raha vastuvõtmine</h2>
+                <p className="text-sm text-stone-500 mt-2 max-w-2xl">
+                  Täida Stripe'i turvaline seadistus siin samas aknas. Aiast Koju veebileht ja tegevuse kirjeldus on eeltäidetud, sina lisad ainult nõutud isiku- ja väljamakse andmed.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closePayoutModal}
+                className="w-12 h-12 rounded-2xl bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-colors flex items-center justify-center"
+                aria-label="Sulge väljamakse seadistus"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="p-4 md:p-6 bg-stone-50/70">
+              {payoutOnboardingError && (
+                <div className="mb-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <p className="font-black mb-1">Seadistust ei saanud avada</p>
+                  <p>{payoutOnboardingError}</p>
+                  {payoutOnboardingError.includes('Stripe Connect') && (
+                    <a
+                      href="https://dashboard.stripe.com/connect"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-4 py-2 text-xs font-black text-white hover:bg-amber-700"
+                    >
+                      Ava Stripe Connect seadistus
+                      <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {isPayoutOnboardingLoading && (
+                <div className="mb-4 rounded-3xl border border-stone-100 bg-white p-5 text-sm font-bold text-stone-500 flex items-center gap-3">
+                  <span className="w-5 h-5 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin"></span>
+                  Laeme turvalist Stripe seadistusvaadet...
+                </div>
+              )}
+
+              <div ref={payoutOnboardingRef} className="min-h-[420px] rounded-[28px] bg-white p-2 md:p-4 shadow-sm" />
+            </div>
           </div>
         </div>
       )}

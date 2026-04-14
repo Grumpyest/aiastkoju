@@ -4,6 +4,9 @@ verify_jwt = false
 [functions.payments-create-connect-link]
 verify_jwt = false
 
+[functions.payments-create-account-session]
+verify_jwt = false
+
 [functions.payments-create-setup-session]
 verify_jwt = false
 
