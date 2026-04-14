@@ -5,7 +5,7 @@ import { CATEGORIES, UNITS } from '../constants';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, YAxis } from 'recharts';
 import { supabase } from '../supabaseClient';
 import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
-import { createConnectAccountSession, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
+import { createConnectAccountSession, disconnectConnectAccount, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
 
 interface GardenerDashboardProps {
   user: User;
@@ -250,6 +250,40 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
       setIsPayoutModalOpen(true);
     } catch (error: any) {
       onNotify?.(error?.message || 'Väljamakse konto avamine ebaõnnestus.', 'error');
+      setPaymentAction(null);
+    }
+  };
+
+  const removePayoutAccount = async () => {
+    if (!paymentProfile?.connect?.accountId) {
+      onNotify?.('Väljamakse konto on juba eemaldatud.', 'success');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Kas oled kindel, et soovid väljamakse konto eemaldada? Pärast eemaldamist ei saa ostjad enne uut ühendamist sinu toodete eest maksta.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setPaymentAction('disconnect');
+      const result = await disconnectConnectAccount();
+      await refreshPaymentProfile();
+
+      if (result.stripeDeleteStatus === 'failed') {
+        onNotify?.(
+          'Konto eemaldati Aiast Koju poolelt. Stripe poolel võib vana konto veel nähtav olla, sest Stripe ei lubanud seda automaatselt kustutada.',
+          'success'
+        );
+      } else {
+        onNotify?.('Väljamakse konto eemaldatud.', 'success');
+      }
+    } catch (error: any) {
+      onNotify?.(error?.message || 'Väljamakse konto eemaldamine ebaõnnestus.', 'error');
+    } finally {
       setPaymentAction(null);
     }
   };
@@ -819,7 +853,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
               <button
                 type="button"
                 onClick={startPayoutSetup}
-                disabled={paymentAction === 'connect'}
+                disabled={paymentAction === 'connect' || paymentAction === 'disconnect'}
                 className="w-full lg:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-4 rounded-2xl font-black shadow-lg shadow-emerald-600/15 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {paymentAction === 'connect'
@@ -828,6 +862,16 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   ? 'Halda väljamakse kontot'
                   : 'Ühenda väljamakse konto'}
               </button>
+              {paymentProfile?.connect?.accountId && (
+                <button
+                  type="button"
+                  onClick={removePayoutAccount}
+                  disabled={paymentAction === 'connect' || paymentAction === 'disconnect'}
+                  className="w-full lg:w-auto rounded-2xl border border-red-100 bg-red-50 px-7 py-3 text-sm font-black text-red-600 transition-all hover:bg-red-100 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {paymentAction === 'disconnect' ? 'Eemaldame...' : 'Eemalda väljamakse konto'}
+                </button>
+              )}
             </div>
           </div>
 

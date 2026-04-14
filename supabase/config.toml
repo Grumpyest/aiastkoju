@@ -7,6 +7,9 @@ verify_jwt = false
 [functions.payments-create-account-session]
 verify_jwt = false
 
+[functions.payments-disconnect-connect-account]
+verify_jwt = false
+
 [functions.payments-create-setup-session]
 verify_jwt = false
 

@@ -96,6 +96,24 @@ export const createConnectAccountSession = async () => {
   return data;
 };
 
+export const disconnectConnectAccount = async () => {
+  const { data, error } = await supabase.functions.invoke<{
+    success?: boolean;
+    stripeDeleteStatus?: 'none' | 'deleted' | 'skipped' | 'failed';
+    stripeDeleteMessage?: string | null;
+  }>('payments-disconnect-connect-account');
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  if (!data?.success) {
+    throw new Error('Väljamakse konto eemaldamine ebaõnnestus.');
+  }
+
+  return data;
+};
+
 export const redirectToPaymentFunction = async (
   functionName: string,
   body: Record<string, unknown> = {}
