@@ -19,6 +19,23 @@ interface GardenerDashboardProps {
 }
 
 const DEFAULT_IMAGE = '/placeholder.png';
+const STRIPE_KEY_MISMATCH_MESSAGE = 'Stripe vÃµtmed ei klapi. Kontrolli Supabase Edge Function secrets all, et STRIPE_SECRET_KEY ja STRIPE_PUBLISHABLE_KEY oleksid samast Stripe kontost ning mÃµlemad kas test- vÃµi live-reÅ¾iimist.';
+
+const getPayoutOnboardingMessage = (message?: string) => {
+  if (!message) {
+    return 'Stripe seadistusvaadet ei saanud laadida.';
+  }
+
+  if (
+    message.includes('No account session with that client secret') ||
+    message.includes('different account') ||
+    message.includes('account session with that client secret')
+  ) {
+    return STRIPE_KEY_MISMATCH_MESSAGE;
+  }
+
+  return message;
+};
 
 const GardenerDashboard: React.FC<GardenerDashboardProps> = ({ 
   user, products, orders, reviews = [], setProducts, setOrders, setReviews, onNotify 
@@ -182,14 +199,17 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
           }
         });
         onboarding.setOnLoadError(({ error }) => {
-          setPayoutOnboardingError(error?.message || 'Stripe seadistusvaadet ei saanud laadida.');
+          const message = getPayoutOnboardingMessage(error?.message);
+          setPayoutOnboardingError(message);
+          onNotifyRef.current?.(message, 'error');
+          payoutOnboardingRef.current?.replaceChildren();
         });
 
         mountedElement = onboarding;
         payoutOnboardingRef.current!.replaceChildren(onboarding);
       } catch (error: any) {
         if (!isCancelled) {
-          const message = error?.message || 'Väljamakse konto seadistust ei saanud avada.';
+          const message = getPayoutOnboardingMessage(error?.message);
           setPayoutOnboardingError(message);
           onNotifyRef.current?.(message, 'error');
         }

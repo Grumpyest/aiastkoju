@@ -21,6 +21,34 @@ const getBusinessProfile = (siteUrl: string, email?: string | null) => ({
   support_email: normalizeOptionalEmail(email),
 });
 
+const getStripeKeyMode = (key: string, testPrefix: string, livePrefix: string) => {
+  if (key.startsWith(testPrefix)) {
+    return 'test';
+  }
+
+  if (key.startsWith(livePrefix)) {
+    return 'live';
+  }
+
+  return null;
+};
+
+const validatePublishableKey = (publishableKey: string) => {
+  const secretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+  const secretMode = getStripeKeyMode(secretKey, 'sk_test_', 'sk_live_');
+  const publishableMode = getStripeKeyMode(publishableKey, 'pk_test_', 'pk_live_');
+
+  if (!publishableMode) {
+    return 'STRIPE_PUBLISHABLE_KEY peab algama pk_test_ vÃµi pk_live_.';
+  }
+
+  if (secretMode && secretMode !== publishableMode) {
+    return 'Stripe vÃµtmed ei klapi: STRIPE_SECRET_KEY ja STRIPE_PUBLISHABLE_KEY peavad olema samast test/live reÅ¾iimist ja samalt Stripe kontolt.';
+  }
+
+  return null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -29,10 +57,16 @@ Deno.serve(async (req) => {
   try {
     assertPaymentEnv();
 
-    const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY');
+    const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY')?.trim();
 
     if (!publishableKey) {
       return errorResponse('STRIPE_PUBLISHABLE_KEY puudub Supabase Edge Function secrets hulgas.', 500);
+    }
+
+    const publishableKeyError = validatePublishableKey(publishableKey);
+
+    if (publishableKeyError) {
+      return errorResponse(publishableKeyError, 500);
     }
 
     const user = await requireRequestUser(req);
