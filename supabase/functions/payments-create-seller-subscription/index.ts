@@ -6,6 +6,7 @@ import {
   getProfile,
   getSiteUrl,
   MARKETPLACE_CURRENCY,
+  normalizeOptionalEmail,
   requireRequestUser,
   stripe,
 } from '../_shared/stripe.ts';
@@ -47,7 +48,6 @@ const getInlineGardenerSubscriptionLineItem = () => {
       },
       product_data: {
         name: 'Aiast Koju aedniku kuutasu',
-        description: 'Aedniku staatuse kuutasu Aiast Koju platvormil.',
       },
     },
   };
@@ -81,7 +81,6 @@ const getOrCreateGardenerMonthlyPriceId = async () => {
     lookup_key: lookupKey,
     product_data: {
       name: 'Aiast Koju aedniku kuutasu',
-      description: 'Aedniku staatuse kuutasu Aiast Koju platvormil.',
     },
     metadata: {
       purpose: 'gardener_subscription',
@@ -181,7 +180,7 @@ Deno.serve(async (req) => {
         customer: customerId,
         items: [{ price: priceId }],
         default_payment_method: paymentMethod.id,
-        payment_behavior: 'default_incomplete',
+        payment_behavior: 'error_if_incomplete',
         payment_settings: {
           payment_method_types: ['card'],
           save_default_payment_method: 'on_subscription',
@@ -226,10 +225,13 @@ Deno.serve(async (req) => {
       lineItem: Record<string, unknown>,
       uiMode: 'embedded_page' | 'embedded' = 'embedded_page',
       includeBranding = true
-    ) => stripe.checkout.sessions.create({
+    ) => {
+      const customerEmail = normalizeOptionalEmail(profile.email || user.email || null);
+
+      return stripe.checkout.sessions.create({
         mode: 'subscription',
         ui_mode: uiMode,
-        customer: customerId,
+        customer_email: typeof customerEmail === 'string' ? customerEmail : undefined,
         payment_method_collection: 'always',
         payment_method_types: ['card'],
         line_items: [lineItem],
@@ -253,6 +255,7 @@ Deno.serve(async (req) => {
           },
         },
       });
+    };
 
     const configuredPriceId = getConfiguredPriceId();
     let session;

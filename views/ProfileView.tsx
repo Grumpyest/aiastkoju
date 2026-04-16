@@ -263,11 +263,6 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       return;
     }
 
-    const ok = confirm(
-      'Soovid hakata Aednikuks? Aedniku staatus maksab 1€/kuu ja makse toimub Stripe kaudu.'
-    );
-    if (!ok) return;
-
     const { error } = await supabase
       .from('profiles')
       .update({

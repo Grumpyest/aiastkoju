@@ -11,6 +11,9 @@ export const markSellerSubscription = async (subscription: any) => {
   }
 
   const isActive = isGardenerSubscriptionActive(subscription.status);
+  const customerId = typeof subscription.customer === 'string'
+    ? subscription.customer
+    : subscription.customer?.id || null;
 
   const { error } = await supabaseAdmin
     .from('profiles')
@@ -18,6 +21,7 @@ export const markSellerSubscription = async (subscription: any) => {
       stripe_subscription_id: subscription.id,
       gardener_subscription_status: subscription.status,
       is_seller: isActive,
+      ...(customerId ? { stripe_customer_id: customerId } : {}),
     })
     .eq('id', userId);
 
