@@ -54,6 +54,9 @@ const isStripePriceConfigurationError = (error: unknown) => {
   return message.includes('no such price') || message.includes('price') && message.includes('does not exist');
 };
 
+const withStripeCheckoutSessionPlaceholder = (url: string) =>
+  url.replace('%7BCHECKOUT_SESSION_ID%7D', '{CHECKOUT_SESSION_ID}');
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -77,6 +80,19 @@ Deno.serve(async (req) => {
     }
 
     const siteUrl = getSiteUrl(req, typeof body.siteUrl === 'string' ? body.siteUrl : null);
+    const uiMode = body.uiMode === 'embedded' ? 'embedded' : 'hosted';
+    const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY');
+
+    if (uiMode === 'embedded' && !publishableKey) {
+      return errorResponse('STRIPE_PUBLISHABLE_KEY puudub Supabase Edge Function secrets hulgas.', 500);
+    }
+
+    const subscriptionReturnUrl = withStripeCheckoutSessionPlaceholder(
+      buildSiteCallbackUrl(siteUrl, {
+        gardener_subscription: 'success',
+        session_id: '{CHECKOUT_SESSION_ID}',
+      })
+    );
     const customerId = await ensureStripeCustomer({
       userId: user.id,
       email: profile.email || user.email || '',
@@ -85,13 +101,17 @@ Deno.serve(async (req) => {
 
     const createSession = (lineItem: Record<string, unknown>) => stripe.checkout.sessions.create({
         mode: 'subscription',
+        ui_mode: uiMode,
         customer: customerId,
         line_items: [lineItem],
-        success_url: buildSiteCallbackUrl(siteUrl, {
-          gardener_subscription: 'success',
-          session_id: '{CHECKOUT_SESSION_ID}',
-        }),
-        cancel_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'cancelled' }),
+        ...(uiMode === 'embedded'
+          ? {
+              return_url: subscriptionReturnUrl,
+            }
+          : {
+              success_url: subscriptionReturnUrl,
+              cancel_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'cancelled' }),
+            }),
         metadata: {
           purpose: 'gardener_subscription',
           user_id: user.id,
@@ -119,6 +139,17 @@ Deno.serve(async (req) => {
       }
 
       session = await createSession(getInlineGardenerSubscriptionLineItem());
+    }
+
+    if (uiMode === 'embedded') {
+      if (!session.client_secret) {
+        return errorResponse('Stripe ei tagastanud embedded kuutasu client secret väärtust.', 500);
+      }
+
+      return jsonResponse({
+        clientSecret: session.client_secret,
+        publishableKey,
+      });
     }
 
     if (!session.url) {

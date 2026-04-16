@@ -210,6 +210,11 @@ const App: React.FC = () => {
       return;
     }
 
+    if (!sessionId.startsWith('cs_')) {
+      window.sessionStorage.removeItem(GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY);
+      return;
+    }
+
     isConfirmingGardenerSubscriptionRef.current = true;
 
     confirmSellerSubscription(sessionId)
@@ -220,6 +225,7 @@ const App: React.FC = () => {
         showToast('Aedniku staatus aktiveeritud.', 'success');
       })
       .catch((error: any) => {
+        window.sessionStorage.removeItem(GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY);
         showToast(error?.message || 'Aedniku staatust ei saanud kinnitada.', 'error');
       })
       .finally(() => {

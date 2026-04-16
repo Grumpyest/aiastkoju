@@ -32,6 +32,13 @@ export interface ConnectAccountSessionSummary {
   setupUrl?: string;
 }
 
+export interface PaymentCheckoutSessionSummary {
+  url?: string;
+  clientSecret?: string;
+  publishableKey?: string;
+  error?: string;
+}
+
 export const maskLast4 = (last4?: string | null) => {
   if (!last4) {
     return 'Kaarti pole salvestatud';
@@ -131,6 +138,27 @@ export const confirmSellerSubscription = async (sessionId: string) => {
 
   if (!data?.success) {
     throw new Error('Aedniku kuutasu kinnitamine ebaõnnestus.');
+  }
+
+  return data;
+};
+
+export const createSellerSubscriptionSession = async (body: Record<string, unknown> = {}) => {
+  const { data, error } = await supabase.functions.invoke<PaymentCheckoutSessionSummary>(
+    'payments-create-seller-subscription',
+    { body }
+  );
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  if (!data?.url && (!data?.clientSecret || !data?.publishableKey)) {
+    throw new Error('Aedniku kuutasu maksevaadet ei saadud luua.');
   }
 
   return data;

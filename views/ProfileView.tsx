@@ -3,7 +3,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../supabaseClient';
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
-import { getPaymentProfile, maskLast4, PaymentProfileSummary, redirectToPaymentFunction } from '../utils/payments';
+import GardenerSubscriptionCheckoutModal from '../components/GardenerSubscriptionCheckoutModal';
+import {
+  createSellerSubscriptionSession,
+  getPaymentProfile,
+  maskLast4,
+  PaymentProfileSummary,
+  redirectToPaymentFunction,
+} from '../utils/payments';
 
 interface ProfileViewProps {
   user: User;
@@ -24,6 +31,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
   });
   const [paymentProfile, setPaymentProfile] = useState<PaymentProfileSummary | null>(null);
   const [paymentAction, setPaymentAction] = useState<string | null>(null);
+  const [sellerSubscriptionCheckout, setSellerSubscriptionCheckout] = useState<{
+    clientSecret: string;
+    publishableKey: string;
+  } | null>(null);
 
 const avatarInputRef = useRef<HTMLInputElement>(null);
 const [isAvatarUploading, setIsAvatarUploading] = useState(false);
@@ -64,6 +75,34 @@ const startPaymentRedirect = async (action: string, functionName: string, body: 
     await redirectToPaymentFunction(functionName, body);
   } catch (error: any) {
     onNotify?.(error?.message || 'Makse tegevust ei saanud alustada.', 'error');
+    setPaymentAction(null);
+  }
+};
+
+const startSellerSubscriptionCheckout = async () => {
+  try {
+    setPaymentAction('seller-subscription');
+    const session = await createSellerSubscriptionSession({
+      siteUrl: window.location.origin,
+      uiMode: 'embedded',
+    });
+
+    if (session.clientSecret && session.publishableKey) {
+      setSellerSubscriptionCheckout({
+        clientSecret: session.clientSecret,
+        publishableKey: session.publishableKey,
+      });
+      return;
+    }
+
+    if (session.url) {
+      window.location.href = session.url;
+      return;
+    }
+
+    throw new Error('Aedniku kuutasu maksevaadet ei saadud avada.');
+  } catch (error: any) {
+    onNotify?.(error?.message || 'Aedniku kuutasu maksevaadet ei saanud avada.', 'error');
     setPaymentAction(null);
   }
 };
@@ -207,7 +246,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     }
 
     const ok = confirm(
-      'Soovid hakata Aednikuks? Sind suunatakse turvalisse Stripe maksevaatesse 1€/kuu tellimuse aktiveerimiseks.'
+      'Soovid hakata Aednikuks? Avame turvalise Stripe maksevaate siin samas lehel 1€/kuu tellimuse aktiveerimiseks.'
     );
     if (!ok) return;
 
@@ -238,9 +277,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       location: nextLocation,
     });
 
-    await startPaymentRedirect('seller-subscription', 'payments-create-seller-subscription', {
-      siteUrl: window.location.origin,
-    });
+    await startSellerSubscriptionCheckout();
   } catch (err: any) {
     setPaymentAction(null);
     onNotify?.(err?.message || 'Rolli vahetus ebaõnnestus', 'error');
@@ -260,6 +297,17 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
+      {sellerSubscriptionCheckout && (
+        <GardenerSubscriptionCheckoutModal
+          clientSecret={sellerSubscriptionCheckout.clientSecret}
+          publishableKey={sellerSubscriptionCheckout.publishableKey}
+          onClose={() => {
+            setSellerSubscriptionCheckout(null);
+            setPaymentAction(null);
+          }}
+        />
+      )}
+
       <button onClick={onBack} className="mb-8 flex items-center gap-2 text-emerald-600 font-bold hover:translate-x-1 transition-transform">
         <i className="fa-solid fa-arrow-left"></i> {t.nav.home}
       </button>

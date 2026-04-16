@@ -63,6 +63,8 @@ export const syncSellerSubscriptionFromStripeCustomer = async (
   ) || subscriptions.data.find(subscription =>
     subscription.metadata?.user_id === userId &&
     isGardenerSubscriptionActive(subscription.status)
+  ) || subscriptions.data.find(subscription =>
+    isGardenerSubscriptionActive(subscription.status)
   );
 
   if (!matchingSubscription) {
