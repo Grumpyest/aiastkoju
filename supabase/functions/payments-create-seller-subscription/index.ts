@@ -181,10 +181,22 @@ Deno.serve(async (req) => {
         customer: customerId,
         items: [{ price: priceId }],
         default_payment_method: paymentMethod.id,
-        payment_behavior: 'error_if_incomplete',
+        payment_behavior: 'default_incomplete',
+        payment_settings: {
+          payment_method_types: ['card'],
+          save_default_payment_method: 'on_subscription',
+        },
+        expand: ['latest_invoice.payment_intent'],
         metadata,
       });
       const result = await markSellerSubscription(subscription);
+
+      if (!result?.isActive) {
+        return errorResponse(
+          'Olemasolevat kaarti ei saanud automaatselt kinnitada. Vali "Lisa uus kaart", et Stripe saaks makse turvaliselt kinnitada.',
+          400
+        );
+      }
 
       return jsonResponse({
         success: true,
@@ -218,6 +230,8 @@ Deno.serve(async (req) => {
         mode: 'subscription',
         ui_mode: uiMode,
         customer: customerId,
+        payment_method_collection: 'always',
+        payment_method_types: ['card'],
         line_items: [lineItem],
         return_url: subscriptionReturnUrl,
         ...(includeBranding
