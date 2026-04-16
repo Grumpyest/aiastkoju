@@ -8,6 +8,10 @@ import {
   stripe,
   supabaseAdmin,
 } from '../_shared/stripe.ts';
+import {
+  isGardenerSubscriptionActive,
+  syncSellerSubscriptionFromStripeCustomer,
+} from '../_shared/subscriptions.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,6 +27,10 @@ Deno.serve(async (req) => {
     if (!profile) {
       return errorResponse('Profiili ei leitud.', 404);
     }
+
+    const syncedSubscription = isGardenerSubscriptionActive(profile.gardener_subscription_status)
+      ? null
+      : await syncSellerSubscriptionFromStripeCustomer(user.id, profile.stripe_customer_id);
 
     const buyerCard = await getPrimaryBuyerPaymentMethod(profile.stripe_customer_id);
 
@@ -68,8 +76,8 @@ Deno.serve(async (req) => {
       payoutMethod,
       connect,
       subscription: {
-        id: profile.stripe_subscription_id || null,
-        status: profile.gardener_subscription_status || null,
+        id: syncedSubscription?.id || profile.stripe_subscription_id || null,
+        status: syncedSubscription?.status || profile.gardener_subscription_status || null,
       },
     });
   } catch (error) {

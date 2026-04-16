@@ -87,7 +87,10 @@ Deno.serve(async (req) => {
         mode: 'subscription',
         customer: customerId,
         line_items: [lineItem],
-        success_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'success' }),
+        success_url: buildSiteCallbackUrl(siteUrl, {
+          gardener_subscription: 'success',
+          session_id: '{CHECKOUT_SESSION_ID}',
+        }),
         cancel_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'cancelled' }),
         metadata: {
           purpose: 'gardener_subscription',

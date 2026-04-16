@@ -114,6 +114,28 @@ export const disconnectConnectAccount = async () => {
   return data;
 };
 
+export const confirmSellerSubscription = async (sessionId: string) => {
+  const { data, error } = await supabase.functions.invoke<{
+    success?: boolean;
+    subscription?: {
+      id?: string | null;
+      status?: string | null;
+    };
+  }>('payments-confirm-seller-subscription', {
+    body: { sessionId },
+  });
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  if (!data?.success) {
+    throw new Error('Aedniku kuutasu kinnitamine ebaõnnestus.');
+  }
+
+  return data;
+};
+
 export const redirectToPaymentFunction = async (
   functionName: string,
   body: Record<string, unknown> = {}

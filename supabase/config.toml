@@ -16,6 +16,9 @@ verify_jwt = false
 [functions.payments-create-seller-subscription]
 verify_jwt = false
 
+[functions.payments-confirm-seller-subscription]
+verify_jwt = false
+
 [functions.payments-cancel-seller-subscription]
 verify_jwt = false
 

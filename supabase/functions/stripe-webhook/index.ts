@@ -5,30 +5,7 @@ import {
   stripe,
   supabaseAdmin,
 } from '../_shared/stripe.ts';
-
-const markSellerSubscription = async (subscription: any) => {
-  const userId = subscription.metadata?.user_id;
-
-  if (!userId) {
-    return;
-  }
-
-  const isActive = ['active', 'trialing'].includes(String(subscription.status));
-
-  await supabaseAdmin
-    .from('profiles')
-    .update({
-      stripe_subscription_id: subscription.id,
-      gardener_subscription_status: subscription.status,
-      is_seller: isActive,
-    })
-    .eq('id', userId);
-
-  await supabaseAdmin
-    .from('products')
-    .update({ is_active: isActive })
-    .eq('seller_id', userId);
-};
+import { markSellerSubscription } from '../_shared/subscriptions.ts';
 
 const syncBuyerCard = async (userId?: string | null, customerId?: string | null) => {
   if (!userId || !customerId) {

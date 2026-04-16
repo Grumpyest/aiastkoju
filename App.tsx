@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { User, UserRole, Language, Product, CartItem, Order, OrderStatus, Review, MarketplaceLocationFilter } from './types';
 import { TRANSLATIONS, CATEGORIES } from './constants';
 import Navbar from './components/Navbar';
@@ -11,8 +11,10 @@ import OrdersView from './views/OrdersView';
 import ProfileView from './views/ProfileView';
 import CheckoutView from './views/CheckoutView';
 import { supabase } from './supabaseClient';
+import { confirmSellerSubscription } from './utils/payments';
 
 const LOCATION_FILTER_STORAGE_KEY = 'marketplace-location-filter-v1';
+const GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY = 'pending-gardener-subscription-session';
 
 type SellerProfileSummary = {
   id: string;
@@ -138,6 +140,7 @@ const App: React.FC = () => {
 
   const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const isConfirmingGardenerSubscriptionRef = useRef(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -149,6 +152,7 @@ const App: React.FC = () => {
     const payment = params.get('payment');
     const paymentMethod = params.get('payment_method');
     const gardenerSubscription = params.get('gardener_subscription');
+    const gardenerSubscriptionSessionId = params.get('session_id');
     const connect = params.get('connect');
 
     if (payment === 'success') {
@@ -168,8 +172,15 @@ const App: React.FC = () => {
     }
 
     if (gardenerSubscription === 'success') {
+      if (gardenerSubscriptionSessionId) {
+        window.sessionStorage.setItem(
+          GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY,
+          gardenerSubscriptionSessionId
+        );
+      }
+
       setCurrentView('profile');
-      showToast('Aedniku kuutasu makse õnnestus. Stripe kinnitab staatuse hetkega.', 'success');
+      showToast('Aedniku kuutasu makse õnnestus. Kinnitame staatust...', 'success');
     } else if (gardenerSubscription === 'cancelled') {
       setCurrentView('profile');
       showToast('Aedniku kuutasu makse katkestati.', 'error');
@@ -186,6 +197,34 @@ const App: React.FC = () => {
     if (payment || paymentMethod || gardenerSubscription || connect) {
       window.history.replaceState(null, '', window.location.pathname);
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || isConfirmingGardenerSubscriptionRef.current) {
+      return;
+    }
+
+    const sessionId = window.sessionStorage.getItem(GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY);
+
+    if (!sessionId) {
+      return;
+    }
+
+    isConfirmingGardenerSubscriptionRef.current = true;
+
+    confirmSellerSubscription(sessionId)
+      .then(() => {
+        window.sessionStorage.removeItem(GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY);
+        setUser(prev => prev ? { ...prev, role: UserRole.GARDENER } : prev);
+        setCurrentView('profile');
+        showToast('Aedniku staatus aktiveeritud.', 'success');
+      })
+      .catch((error: any) => {
+        showToast(error?.message || 'Aedniku staatust ei saanud kinnitada.', 'error');
+      })
+      .finally(() => {
+        isConfirmingGardenerSubscriptionRef.current = false;
+      });
   }, [user]);
 
   useEffect(() => {
