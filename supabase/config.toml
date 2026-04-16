@@ -13,6 +13,9 @@ verify_jwt = false
 [functions.payments-create-setup-session]
 verify_jwt = false
 
+[functions.payments-remove-card]
+verify_jwt = false
+
 [functions.payments-create-seller-subscription]
 verify_jwt = false
 

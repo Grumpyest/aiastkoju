@@ -5,7 +5,7 @@ import { CATEGORIES, UNITS } from '../constants';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, YAxis } from 'recharts';
 import { supabase } from '../supabaseClient';
 import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
-import { createConnectAccountSession, disconnectConnectAccount, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
+import { createConnectAccountSession, disconnectConnectAccount, getCachedPaymentProfile, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
 
 interface GardenerDashboardProps {
   user: User;
@@ -103,8 +103,8 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     ? `${paymentProfile.payoutMethod.brand || 'Konto'} ****${paymentProfile.payoutMethod.last4}`
     : 'Kontot pole veel ühendatud';
 
-  const refreshPaymentProfile = async () => {
-    const profile = await getPaymentProfile();
+  const refreshPaymentProfile = async (options: { refreshStripe?: boolean } = {}) => {
+    const profile = await getPaymentProfile(options);
     setPaymentProfile(profile);
     return profile;
   };
@@ -118,10 +118,16 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
 
     const loadPaymentProfile = async () => {
       try {
-        const profile = await getPaymentProfile();
+        const profile = await getCachedPaymentProfile(user.id);
 
         if (!isCancelled) {
           setPaymentProfile(profile);
+        }
+
+        const refreshedProfile = await getPaymentProfile({ refreshStripe: true });
+
+        if (!isCancelled) {
+          setPaymentProfile(refreshedProfile);
         }
       } catch (error) {
         if (!isCancelled) {
@@ -135,7 +141,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [user.id]);
 
   useEffect(() => {
     if (!isPayoutModalOpen || !payoutOnboardingRef.current) {
@@ -200,7 +206,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
           setIsPayoutModalOpen(false);
 
           try {
-            await refreshPaymentProfile();
+            await refreshPaymentProfile({ refreshStripe: true });
           } catch (error) {
             console.warn('Payment profile refresh failed after onboarding exit', error);
           }
@@ -244,7 +250,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     setPaymentAction(null);
 
     try {
-      await refreshPaymentProfile();
+      await refreshPaymentProfile({ refreshStripe: true });
     } catch (error) {
       console.warn('Payment profile refresh failed after closing onboarding modal', error);
     }
@@ -278,7 +284,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     try {
       setPaymentAction('disconnect');
       const result = await disconnectConnectAccount();
-      await refreshPaymentProfile();
+      await refreshPaymentProfile({ refreshStripe: true });
 
       if (result.stripeDeleteStatus === 'failed') {
         onNotify?.(

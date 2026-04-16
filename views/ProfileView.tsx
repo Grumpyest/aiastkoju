@@ -6,10 +6,12 @@ import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
 import GardenerSubscriptionCheckoutModal from '../components/GardenerSubscriptionCheckoutModal';
 import {
   createSellerSubscriptionSession,
+  getCachedPaymentProfile,
   getPaymentProfile,
   maskLast4,
   PaymentProfileSummary,
   redirectToPaymentFunction,
+  removeBuyerPaymentCard,
 } from '../utils/payments';
 
 interface ProfileViewProps {
@@ -42,12 +44,18 @@ const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
 const safeName = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
+const refreshPaymentProfile = async (options: { refreshStripe?: boolean } = {}) => {
+  const profile = await getPaymentProfile(options);
+  setPaymentProfile(profile);
+  return profile;
+};
+
 useEffect(() => {
   let isCancelled = false;
 
   const loadPaymentProfile = async () => {
     try {
-      const profile = await getPaymentProfile();
+      const profile = await getCachedPaymentProfile(user.id);
 
       if (!isCancelled) {
         setPaymentProfile(profile);
@@ -55,6 +63,12 @@ useEffect(() => {
         if (['active', 'trialing'].includes(String(profile.subscription?.status)) && user.role !== UserRole.GARDENER) {
           setUser(prev => prev ? { ...prev, role: UserRole.GARDENER } : prev);
         }
+      }
+
+      const refreshedProfile = await getPaymentProfile({ refreshStripe: true });
+
+      if (!isCancelled) {
+        setPaymentProfile(refreshedProfile);
       }
     } catch (error) {
       if (!isCancelled) {
@@ -120,6 +134,24 @@ const startSellerSubscriptionWithSavedCard = async () => {
     onNotify?.('Aedniku staatus aktiveeritud salvestatud kaardiga.', 'success');
   } catch (error: any) {
     onNotify?.(error?.message || 'Salvestatud kaardiga makse ebaõnnestus.', 'error');
+  } finally {
+    setPaymentAction(null);
+  }
+};
+
+const removeBuyerCard = async () => {
+  if (!paymentProfile?.buyerCard?.last4) {
+    onNotify?.('Salvestatud maksekaarti pole.', 'success');
+    return;
+  }
+
+  try {
+    setPaymentAction('remove-buyer-card');
+    await removeBuyerPaymentCard();
+    setPaymentProfile(prev => prev ? { ...prev, buyerCard: null } : { buyerCard: null });
+    onNotify?.('Maksekaart eemaldatud.', 'success');
+  } catch (error: any) {
+    onNotify?.(error?.message || 'Maksekaardi eemaldamine ebaÃµnnestus.', 'error');
   } finally {
     setPaymentAction(null);
   }
@@ -290,7 +322,12 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       location: nextLocation,
     });
 
-    if (paymentProfile?.buyerCard?.last4) {
+    setPaymentAction('seller-subscription-profile');
+    const latestPaymentProfile = paymentProfile?.buyerCard?.last4
+      ? paymentProfile
+      : await refreshPaymentProfile({ refreshStripe: true });
+
+    if (latestPaymentProfile?.buyerCard?.last4) {
       setPaymentAction(null);
       setIsSellerSubscriptionChoiceOpen(true);
       return;
@@ -448,11 +485,17 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
              </p>
              <button 
               onClick={toggleGardenerRole} 
-              disabled={paymentAction === 'seller-subscription' || paymentAction === 'cancel-subscription'}
+              disabled={
+                paymentAction === 'seller-subscription' ||
+                paymentAction === 'seller-subscription-profile' ||
+                paymentAction === 'cancel-subscription'
+              }
               className={`w-full py-3 rounded-xl font-bold text-xs shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed ${user.role === UserRole.GARDENER ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-emerald-900 hover:bg-emerald-50'}`}
              >
                {paymentAction === 'seller-subscription'
                  ? 'Avame Stripe makset...'
+                 : paymentAction === 'seller-subscription-profile'
+                 ? 'Kontrollime kaarti...'
                  : paymentAction === 'cancel-subscription'
                  ? 'Lõpetame kuutasu...'
                  : user.role === UserRole.GARDENER ? 'Lõpeta aedniku staatus' : 'Aktiveeri aedniku staatus (1€/kuu)'}
@@ -537,11 +580,21 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
                   <button
                     type="button"
                     onClick={() => startPaymentRedirect('buyer-card', 'payments-create-setup-session')}
-                    disabled={paymentAction === 'buyer-card'}
+                    disabled={paymentAction === 'buyer-card' || paymentAction === 'remove-buyer-card'}
                     className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {paymentAction === 'buyer-card' ? 'Avame Stripe...' : paymentProfile?.buyerCard ? 'Uuenda kaarti' : 'Salvesta kaart'}
                   </button>
+                  {paymentProfile?.buyerCard?.last4 && (
+                    <button
+                      type="button"
+                      onClick={removeBuyerCard}
+                      disabled={paymentAction === 'buyer-card' || paymentAction === 'remove-buyer-card'}
+                      className="mt-3 w-full rounded-2xl border border-red-100 bg-white px-4 py-3 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {paymentAction === 'remove-buyer-card' ? 'Eemaldame...' : 'Eemalda kaart'}
+                    </button>
+                  )}
                 </div>
               </div>
            </div>

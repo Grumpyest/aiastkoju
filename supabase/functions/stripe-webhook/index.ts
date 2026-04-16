@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
         }
 
         if (session.mode === 'subscription' && session.metadata?.purpose === 'gardener_subscription') {
+          const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
           const subscriptionId = typeof session.subscription === 'string'
             ? session.subscription
             : session.subscription?.id;
@@ -154,6 +155,8 @@ Deno.serve(async (req) => {
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             await markSellerSubscription(subscription);
           }
+
+          await syncBuyerCard(session.metadata?.user_id || null, customerId || null);
         }
 
         break;

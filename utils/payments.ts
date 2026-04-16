@@ -53,8 +53,70 @@ export const maskLast4 = (last4?: string | null) => {
   return `************${last4}`;
 };
 
-export const getPaymentProfile = async () => {
-  const { data, error } = await supabase.functions.invoke<PaymentProfileSummary>('payments-get-profile');
+const paymentProfileFromRow = (row: any): PaymentProfileSummary => ({
+  buyerCard: row?.card_last4
+    ? {
+        type: 'card',
+        brand: row.card_brand || 'kaart',
+        last4: row.card_last4,
+        expMonth: row.card_exp_month || undefined,
+        expYear: row.card_exp_year || undefined,
+        label: `${row.card_brand || 'kaart'} **** ${row.card_last4}`,
+      }
+    : null,
+  payoutMethod: row?.payout_method_last4
+    ? {
+        type: row.payout_method_type || 'konto',
+        brand: row.payout_method_brand || 'Konto',
+        last4: row.payout_method_last4,
+        label: `${row.payout_method_brand || 'Konto'} **** ${row.payout_method_last4}`,
+      }
+    : null,
+  connect: {
+    accountId: row?.stripe_connect_account_id || null,
+    chargesEnabled: Boolean(row?.stripe_connect_charges_enabled),
+    payoutsEnabled: Boolean(row?.stripe_connect_payouts_enabled),
+    detailsSubmitted: Boolean(row?.stripe_connect_onboarding_complete),
+    disabledReason: null,
+  },
+  subscription: {
+    id: row?.stripe_subscription_id || null,
+    status: row?.gardener_subscription_status || null,
+  },
+});
+
+export const getCachedPaymentProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(`
+      card_brand,
+      card_last4,
+      card_exp_month,
+      card_exp_year,
+      payout_method_brand,
+      payout_method_last4,
+      payout_method_type,
+      stripe_connect_account_id,
+      stripe_connect_charges_enabled,
+      stripe_connect_payouts_enabled,
+      stripe_connect_onboarding_complete,
+      stripe_subscription_id,
+      gardener_subscription_status
+    `)
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return paymentProfileFromRow(data);
+};
+
+export const getPaymentProfile = async (options: { refreshStripe?: boolean } = {}) => {
+  const { data, error } = await supabase.functions.invoke<PaymentProfileSummary>('payments-get-profile', {
+    body: options.refreshStripe ? { refreshStripe: true } : {},
+  });
 
   if (error) {
     throw new Error(await getFunctionErrorMessage(error));
@@ -122,6 +184,20 @@ export const disconnectConnectAccount = async () => {
 
   if (!data?.success) {
     throw new Error('Väljamakse konto eemaldamine ebaõnnestus.');
+  }
+
+  return data;
+};
+
+export const removeBuyerPaymentCard = async () => {
+  const { data, error } = await supabase.functions.invoke<{ success?: boolean }>('payments-remove-card');
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  if (!data?.success) {
+    throw new Error('Maksekaardi eemaldamine ebaÃµnnestus.');
   }
 
   return data;
