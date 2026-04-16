@@ -98,9 +98,9 @@ Deno.serve(async (req) => {
       name: profile.full_name || user.user_metadata?.full_name || null,
     });
 
-    const createSession = (lineItem: Record<string, unknown>) => stripe.checkout.sessions.create({
+    const createSession = (lineItem: Record<string, unknown>, uiMode: 'embedded_page' | 'embedded' = 'embedded_page') => stripe.checkout.sessions.create({
         mode: 'subscription',
-        ui_mode: 'embedded',
+        ui_mode: uiMode,
         customer: customerId,
         line_items: [lineItem],
         return_url: subscriptionReturnUrl,
@@ -119,8 +119,22 @@ Deno.serve(async (req) => {
     const configuredPriceId = getConfiguredPriceId();
     let session;
 
+    const createEmbeddedSession = async (lineItem: Record<string, unknown>) => {
+      try {
+        return await createSession(lineItem, 'embedded_page');
+      } catch (error) {
+        const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+        if (!message.includes('ui_mode')) {
+          throw error;
+        }
+
+        return createSession(lineItem, 'embedded');
+      }
+    };
+
     try {
-      session = await createSession(
+      session = await createEmbeddedSession(
         configuredPriceId
           ? { price: configuredPriceId, quantity: 1 }
           : getInlineGardenerSubscriptionLineItem()
@@ -130,7 +144,7 @@ Deno.serve(async (req) => {
         throw error;
       }
 
-      session = await createSession(getInlineGardenerSubscriptionLineItem());
+      session = await createEmbeddedSession(getInlineGardenerSubscriptionLineItem());
     }
 
     if (!session.client_secret) {

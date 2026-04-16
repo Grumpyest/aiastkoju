@@ -31,7 +31,16 @@ const GardenerSubscriptionCheckoutModal: React.FC<GardenerSubscriptionCheckoutMo
           throw new Error('Stripe maksevaadet ei saanud laadida.');
         }
 
-        const checkout = await stripe.initEmbeddedCheckout({
+        const stripeWithEmbeddedCheckout = stripe as any;
+        const createEmbeddedCheckout =
+          stripeWithEmbeddedCheckout.createEmbeddedCheckoutPage ||
+          stripeWithEmbeddedCheckout.initEmbeddedCheckout;
+
+        if (!createEmbeddedCheckout) {
+          throw new Error('Stripe embedded maksevaadet ei saa selles brauseris avada.');
+        }
+
+        const checkout = await createEmbeddedCheckout.call(stripeWithEmbeddedCheckout, {
           clientSecret,
         });
 
