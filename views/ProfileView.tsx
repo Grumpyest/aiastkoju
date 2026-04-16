@@ -95,11 +95,6 @@ const startSellerSubscriptionCheckout = async () => {
       return;
     }
 
-    if (session.url) {
-      window.location.href = session.url;
-      return;
-    }
-
     throw new Error('Aedniku kuutasu maksevaadet ei saadud avada.');
   } catch (error: any) {
     onNotify?.(error?.message || 'Aedniku kuutasu maksevaadet ei saanud avada.', 'error');
