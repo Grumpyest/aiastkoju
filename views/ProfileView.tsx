@@ -238,7 +238,9 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       location: nextLocation,
     });
 
-    await startPaymentRedirect('seller-subscription', 'payments-create-seller-subscription');
+    await startPaymentRedirect('seller-subscription', 'payments-create-seller-subscription', {
+      siteUrl: window.location.origin,
+    });
   } catch (err: any) {
     setPaymentAction(null);
     onNotify?.(err?.message || 'Rolli vahetus ebaõnnestus', 'error');
