@@ -9,6 +9,10 @@ import {
   requireRequestUser,
   stripe,
 } from '../_shared/stripe.ts';
+import {
+  isGardenerSubscriptionActive,
+  markSellerSubscription,
+} from '../_shared/subscriptions.ts';
 
 const DEFAULT_GARDENER_MONTHLY_CENTS = 100;
 
@@ -49,6 +53,44 @@ const getInlineGardenerSubscriptionLineItem = () => {
   };
 };
 
+const getOrCreateGardenerMonthlyPriceId = async () => {
+  const configuredPriceId = getConfiguredPriceId();
+
+  if (configuredPriceId) {
+    return configuredPriceId;
+  }
+
+  const amountCents = getMonthlyAmountCents();
+  const lookupKey = `aiastkoju_gardener_monthly_${MARKETPLACE_CURRENCY}_${amountCents}`;
+  const existingPrices = await stripe.prices.list({
+    active: true,
+    lookup_keys: [lookupKey],
+    limit: 1,
+  });
+
+  if (existingPrices.data[0]?.id) {
+    return existingPrices.data[0].id;
+  }
+
+  const price = await stripe.prices.create({
+    currency: MARKETPLACE_CURRENCY,
+    unit_amount: amountCents,
+    recurring: {
+      interval: 'month',
+    },
+    lookup_key: lookupKey,
+    product_data: {
+      name: 'Aiast Koju aedniku kuutasu',
+      description: 'Aedniku staatuse kuutasu Aiast Koju platvormil.',
+    },
+    metadata: {
+      purpose: 'gardener_subscription',
+    },
+  });
+
+  return price.id;
+};
+
 const isStripePriceConfigurationError = (error: unknown) => {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
   return message.includes('no such price') || message.includes('price') && message.includes('does not exist');
@@ -79,6 +121,81 @@ Deno.serve(async (req) => {
       return errorResponse('Aedniku kuutasu alustamiseks peavad telefon ja asukoht olema profiilis salvestatud.', 400);
     }
 
+    const customerId = await ensureStripeCustomer({
+      userId: user.id,
+      email: profile.email || user.email || '',
+      name: profile.full_name || user.user_metadata?.full_name || null,
+    });
+    const metadata = {
+      purpose: 'gardener_subscription',
+      user_id: user.id,
+    };
+
+    if (body.useSavedCard === true) {
+      const existingSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all',
+        limit: 10,
+      });
+      const activeSubscription = existingSubscriptions.data.find(subscription =>
+        subscription.metadata?.user_id === user.id &&
+        subscription.metadata?.purpose === 'gardener_subscription' &&
+        isGardenerSubscriptionActive(subscription.status)
+      ) || existingSubscriptions.data.find(subscription =>
+        subscription.metadata?.user_id === user.id &&
+        isGardenerSubscriptionActive(subscription.status)
+      );
+
+      if (activeSubscription) {
+        const result = await markSellerSubscription(activeSubscription);
+        return jsonResponse({
+          success: true,
+          usedSavedCard: true,
+          subscription: {
+            id: result?.id || activeSubscription.id,
+            status: result?.status || activeSubscription.status,
+          },
+        });
+      }
+
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+        limit: 1,
+      });
+      const paymentMethod = paymentMethods.data[0];
+
+      if (!paymentMethod) {
+        return errorResponse('Salvestatud maksekaarti ei leitud. Lisa uus kaart.', 400);
+      }
+
+      const priceId = await getOrCreateGardenerMonthlyPriceId();
+
+      await stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethod.id,
+        },
+      });
+
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: priceId }],
+        default_payment_method: paymentMethod.id,
+        payment_behavior: 'error_if_incomplete',
+        metadata,
+      });
+      const result = await markSellerSubscription(subscription);
+
+      return jsonResponse({
+        success: true,
+        usedSavedCard: true,
+        subscription: {
+          id: result?.id || subscription.id,
+          status: result?.status || subscription.status,
+        },
+      });
+    }
+
     const siteUrl = getSiteUrl(req, typeof body.siteUrl === 'string' ? body.siteUrl : null);
     const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY');
 
@@ -92,26 +209,33 @@ Deno.serve(async (req) => {
         session_id: '{CHECKOUT_SESSION_ID}',
       })
     );
-    const customerId = await ensureStripeCustomer({
-      userId: user.id,
-      email: profile.email || user.email || '',
-      name: profile.full_name || user.user_metadata?.full_name || null,
-    });
 
-    const createSession = (lineItem: Record<string, unknown>, uiMode: 'embedded_page' | 'embedded' = 'embedded_page') => stripe.checkout.sessions.create({
+    const createSession = (
+      lineItem: Record<string, unknown>,
+      uiMode: 'embedded_page' | 'embedded' = 'embedded_page',
+      includeBranding = true
+    ) => stripe.checkout.sessions.create({
         mode: 'subscription',
         ui_mode: uiMode,
         customer: customerId,
         line_items: [lineItem],
         return_url: subscriptionReturnUrl,
+        ...(includeBranding
+          ? {
+              branding_settings: {
+                background_color: '#ffffff',
+                button_color: '#059669',
+                border_style: 'rounded',
+                display_name: 'Aiast Koju',
+              },
+            }
+          : {}),
         metadata: {
-          purpose: 'gardener_subscription',
-          user_id: user.id,
+          ...metadata,
         },
         subscription_data: {
           metadata: {
-            purpose: 'gardener_subscription',
-            user_id: user.id,
+            ...metadata,
           },
         },
       });
@@ -125,11 +249,27 @@ Deno.serve(async (req) => {
       } catch (error) {
         const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
 
+        if (message.includes('branding_settings')) {
+          return createSession(lineItem, 'embedded_page', false);
+        }
+
         if (!message.includes('ui_mode')) {
           throw error;
         }
 
-        return createSession(lineItem, 'embedded');
+        try {
+          return await createSession(lineItem, 'embedded');
+        } catch (fallbackError) {
+          const fallbackMessage = fallbackError instanceof Error
+            ? fallbackError.message.toLowerCase()
+            : String(fallbackError).toLowerCase();
+
+          if (fallbackMessage.includes('branding_settings')) {
+            return createSession(lineItem, 'embedded', false);
+          }
+
+          throw fallbackError;
+        }
       }
     };
 

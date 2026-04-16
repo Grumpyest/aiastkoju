@@ -33,9 +33,15 @@ export interface ConnectAccountSessionSummary {
 }
 
 export interface PaymentCheckoutSessionSummary {
+  success?: boolean;
   url?: string;
   clientSecret?: string;
   publishableKey?: string;
+  usedSavedCard?: boolean;
+  subscription?: {
+    id?: string | null;
+    status?: string | null;
+  };
   error?: string;
 }
 
@@ -157,7 +163,7 @@ export const createSellerSubscriptionSession = async (body: Record<string, unkno
     throw new Error(data.error);
   }
 
-  if (!data?.url && (!data?.clientSecret || !data?.publishableKey)) {
+  if (!data?.success && !data?.url && (!data?.clientSecret || !data?.publishableKey)) {
     throw new Error('Aedniku kuutasu maksevaadet ei saadud luua.');
   }
 

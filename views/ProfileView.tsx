@@ -35,6 +35,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
     clientSecret: string;
     publishableKey: string;
   } | null>(null);
+  const [isSellerSubscriptionChoiceOpen, setIsSellerSubscriptionChoiceOpen] = useState(false);
 
 const avatarInputRef = useRef<HTMLInputElement>(null);
 const [isAvatarUploading, setIsAvatarUploading] = useState(false);
@@ -84,7 +85,7 @@ const startSellerSubscriptionCheckout = async () => {
     setPaymentAction('seller-subscription');
     const session = await createSellerSubscriptionSession({
       siteUrl: window.location.origin,
-      uiMode: 'embedded',
+      useSavedCard: false,
     });
 
     if (session.clientSecret && session.publishableKey) {
@@ -98,6 +99,28 @@ const startSellerSubscriptionCheckout = async () => {
     throw new Error('Aedniku kuutasu maksevaadet ei saadud avada.');
   } catch (error: any) {
     onNotify?.(error?.message || 'Aedniku kuutasu maksevaadet ei saanud avada.', 'error');
+    setPaymentAction(null);
+  }
+};
+
+const startSellerSubscriptionWithSavedCard = async () => {
+  try {
+    setPaymentAction('seller-subscription-saved-card');
+    const result = await createSellerSubscriptionSession({
+      useSavedCard: true,
+    });
+
+    if (!result.success) {
+      throw new Error('Salvestatud kaardiga kuutasu aktiveerimine ebaõnnestus.');
+    }
+
+    setIsSellerSubscriptionChoiceOpen(false);
+    setSellerSubscriptionCheckout(null);
+    setUser(prev => prev ? { ...prev, role: UserRole.GARDENER } : prev);
+    onNotify?.('Aedniku staatus aktiveeritud salvestatud kaardiga.', 'success');
+  } catch (error: any) {
+    onNotify?.(error?.message || 'Salvestatud kaardiga makse ebaõnnestus.', 'error');
+  } finally {
     setPaymentAction(null);
   }
 };
@@ -241,7 +264,7 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     }
 
     const ok = confirm(
-      'Soovid hakata Aednikuks? Avame turvalise Stripe maksevaate siin samas lehel 1€/kuu tellimuse aktiveerimiseks.'
+      'Soovid hakata Aednikuks? Aedniku staatus maksab 1€/kuu ja makse toimub Stripe kaudu.'
     );
     if (!ok) return;
 
@@ -272,6 +295,12 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
       location: nextLocation,
     });
 
+    if (paymentProfile?.buyerCard?.last4) {
+      setPaymentAction(null);
+      setIsSellerSubscriptionChoiceOpen(true);
+      return;
+    }
+
     await startSellerSubscriptionCheckout();
   } catch (err: any) {
     setPaymentAction(null);
@@ -292,6 +321,66 @@ const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
+      {isSellerSubscriptionChoiceOpen && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center overflow-y-auto bg-stone-950/60 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                  Aedniku kuutasu
+                </p>
+                <h2 className="text-2xl font-black text-stone-950">Vali makseviis</h2>
+                <p className="mt-2 text-sm leading-relaxed text-stone-500">
+                  Kuutasu on 1€/kuu. Võid kasutada salvestatud kaarti või lisada uue.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSellerSubscriptionChoiceOpen(false)}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition hover:bg-stone-200 hover:text-stone-900"
+                aria-label="Sulge maksevalik"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                Salvestatud kaart
+              </p>
+              <p className="text-lg font-black text-stone-950">
+                {paymentProfile?.buyerCard?.brand || 'kaart'} {maskLast4(paymentProfile?.buyerCard?.last4)}
+              </p>
+              <p className="mt-1 text-sm text-stone-500">
+                {paymentProfile?.buyerCard?.expMonth}/{paymentProfile?.buyerCard?.expYear}
+              </p>
+              <button
+                type="button"
+                onClick={startSellerSubscriptionWithSavedCard}
+                disabled={paymentAction === 'seller-subscription-saved-card'}
+                className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-4 text-sm font-black text-white shadow-lg transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {paymentAction === 'seller-subscription-saved-card'
+                  ? 'Aktiveerime...'
+                  : 'Kasuta olemasolevat kaarti'}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSellerSubscriptionChoiceOpen(false);
+                startSellerSubscriptionCheckout();
+              }}
+              disabled={paymentAction === 'seller-subscription'}
+              className="mt-4 w-full rounded-2xl border border-stone-200 bg-white px-4 py-4 text-sm font-black text-stone-800 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Lisa uus kaart
+            </button>
+          </div>
+        </div>
+      )}
+
       {sellerSubscriptionCheckout && (
         <GardenerSubscriptionCheckoutModal
           clientSecret={sellerSubscriptionCheckout.clientSecret}
