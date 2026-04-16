@@ -22,13 +22,17 @@ const getMonthlyAmountCents = () => {
   return Math.round(configuredAmount);
 };
 
-const getGardenerSubscriptionLineItem = () => {
+const getConfiguredPriceId = () => {
   const priceId = Deno.env.get('STRIPE_GARDENER_MONTHLY_PRICE_ID')?.trim();
 
   if (priceId && /^price_[A-Za-z0-9]+$/.test(priceId)) {
-    return { price: priceId, quantity: 1 };
+    return priceId;
   }
 
+  return null;
+};
+
+const getInlineGardenerSubscriptionLineItem = () => {
   return {
     quantity: 1,
     price_data: {
@@ -43,6 +47,11 @@ const getGardenerSubscriptionLineItem = () => {
       },
     },
   };
+};
+
+const isStripePriceConfigurationError = (error: unknown) => {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return message.includes('no such price') || message.includes('price') && message.includes('does not exist');
 };
 
 Deno.serve(async (req) => {
@@ -74,23 +83,40 @@ Deno.serve(async (req) => {
       name: profile.full_name || user.user_metadata?.full_name || null,
     });
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer: customerId,
-      line_items: [getGardenerSubscriptionLineItem()],
-      success_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'success' }),
-      cancel_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'cancelled' }),
-      metadata: {
-        purpose: 'gardener_subscription',
-        user_id: user.id,
-      },
-      subscription_data: {
+    const createSession = (lineItem: Record<string, unknown>) => stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer: customerId,
+        line_items: [lineItem],
+        success_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'success' }),
+        cancel_url: buildSiteCallbackUrl(siteUrl, { gardener_subscription: 'cancelled' }),
         metadata: {
           purpose: 'gardener_subscription',
           user_id: user.id,
         },
-      },
-    });
+        subscription_data: {
+          metadata: {
+            purpose: 'gardener_subscription',
+            user_id: user.id,
+          },
+        },
+      });
+
+    const configuredPriceId = getConfiguredPriceId();
+    let session;
+
+    try {
+      session = await createSession(
+        configuredPriceId
+          ? { price: configuredPriceId, quantity: 1 }
+          : getInlineGardenerSubscriptionLineItem()
+      );
+    } catch (error) {
+      if (!configuredPriceId || !isStripePriceConfigurationError(error)) {
+        throw error;
+      }
+
+      session = await createSession(getInlineGardenerSubscriptionLineItem());
+    }
 
     if (!session.url) {
       return errorResponse('Stripe ei tagastanud kuutasu makselinki.', 500);
