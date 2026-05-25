@@ -459,6 +459,7 @@ const App: React.FC = () => {
         status: orderRow.status as OrderStatus,
         paymentStatus: orderRow.payment_status || 'unpaid',
         total: Number(orderRow.total ?? 0),
+        platformFeeCents: Number(orderRow.platform_fee_cents ?? 0),
         createdAt: String(orderRow.created_at ?? ''),
         deliveryAddress: orderRow.delivery_address || '',
         notes: orderRow.notes || '',

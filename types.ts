@@ -90,6 +90,7 @@ export interface Order {
   status: OrderStatus;
   paymentStatus?: string;
   total: number;
+  platformFeeCents?: number;
   items: {
     productId: string;
     title: string;

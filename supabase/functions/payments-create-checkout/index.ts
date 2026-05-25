@@ -224,36 +224,19 @@ Deno.serve(async (req) => {
       customer: customerId,
       customer_email: customerId ? undefined : buyer.email.trim().toLowerCase(),
       payment_method_types: ['card'],
-      line_items: [
-        ...cartItems.map(item => ({
-          quantity: item.quantity,
-          price_data: {
-            currency: MARKETPLACE_CURRENCY,
-            unit_amount: Number(item.product.price_cents || 0),
-            product_data: {
-              name: item.product.title || 'Aiast Koju toode',
-              metadata: {
-                product_id: String(item.product.id),
-              },
+      line_items: cartItems.map(item => ({
+        quantity: item.quantity,
+        price_data: {
+          currency: MARKETPLACE_CURRENCY,
+          unit_amount: Number(item.product.price_cents || 0),
+          product_data: {
+            name: item.product.title || 'Aiast Koju toode',
+            metadata: {
+              product_id: String(item.product.id),
             },
           },
-        })),
-        ...(PLATFORM_FEE_CENTS > 0
-          ? [{
-            quantity: groupedBySeller.size,
-            price_data: {
-              currency: MARKETPLACE_CURRENCY,
-              unit_amount: PLATFORM_FEE_CENTS,
-              product_data: {
-                name: 'Aiast Koju teenustasu',
-                metadata: {
-                  type: 'platform_fee',
-                },
-              },
-            },
-          }]
-          : []),
-      ],
+        },
+      })),
       payment_intent_data: {
         setup_future_usage: user ? 'off_session' : undefined,
         transfer_group: `aiastkoju_${createdOrderIds[0]}`,

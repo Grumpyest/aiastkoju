@@ -108,6 +108,9 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const myReviews = useMemo(() => reviews.filter(r => myProducts.some(p => p.id === r.productId)), [reviews, myProducts]);
   
   const totalRevenue = myOrders.filter(o => o.status === OrderStatus.COMPLETED).reduce((acc, curr) => acc + curr.total, 0);
+  const payoutBeforeStripeTotal = myOrders
+    .filter(o => o.status === OrderStatus.COMPLETED)
+    .reduce((acc, curr) => acc + Math.max(0, curr.total - Number(curr.platformFeeCents ?? 0) / 100), 0);
   const pendingOrdersCount = myOrders.filter(o => o.status === OrderStatus.NEW).length;
   const inProgressOrdersCount = myOrders.filter(o => o.status === OrderStatus.CONFIRMED).length;
   const payoutStatus = paymentProfile?.connect?.payoutsEnabled
@@ -853,8 +856,9 @@ const handleSaveEdit = async (e: React.FormEvent) => {
         <div className="space-y-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Käive</p>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Brutomüük</p>
               <h3 className="text-2xl font-black text-emerald-700">{totalRevenue.toFixed(2)}€</h3>
+              <p className="mt-2 text-[11px] font-medium text-stone-500">Enne Stripe tasu: {payoutBeforeStripeTotal.toFixed(2)}€</p>
             </div>
             <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Uusi tellimusi</p>
@@ -1037,6 +1041,9 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   {getStatusBadge(order.status)}
                   <div className="text-right">
                     <p className="text-xl font-black text-emerald-700">{Number(order.total ?? 0).toFixed(2)}€</p>
+                    <p className="text-[11px] text-stone-500 mt-1">
+                      Väljamakse enne Stripe tasu: {(Math.max(0, Number(order.total ?? 0) - Number(order.platformFeeCents ?? 0) / 100)).toFixed(2)}€
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1066,6 +1073,23 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 </div>
 
                 <div className="md:col-span-2 bg-stone-50 rounded-2xl p-4">
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                    <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Bruto</p>
+                      <p className="font-black text-stone-900">{Number(order.total ?? 0).toFixed(2)}€</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Platvormitasu</p>
+                      <p className="font-black text-stone-900">{(Number(order.platformFeeCents ?? 0) / 100).toFixed(2)}€</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Enne Stripe tasu</p>
+                      <p className="font-black text-emerald-700">{(Math.max(0, Number(order.total ?? 0) - Number(order.platformFeeCents ?? 0) / 100)).toFixed(2)}€</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-stone-500 mb-4">
+                    Stripe töötlustasu arvestatakse väljamakse tegemisel Stripe'i poolel eraldi maha.
+                  </p>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Ostja soovid</p>
                   <p className="text-sm font-medium text-stone-700 leading-relaxed">{order.notes || 'Lisamärkusi ei lisatud.'}</p>
                 </div>

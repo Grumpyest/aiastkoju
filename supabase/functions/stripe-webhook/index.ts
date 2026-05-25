@@ -76,7 +76,8 @@ const completeMarketplaceCheckout = async (session: any) => {
 
     const seller = sellersById.get(String(order.seller_id));
     const amountCents = Math.round(Number(order.total || 0) * 100);
-    const sellerAmountCents = Math.max(0, amountCents);
+    const platformFeeCents = Math.max(0, Number(order.platform_fee_cents || 0));
+    const sellerAmountCents = Math.max(0, amountCents - platformFeeCents);
 
     if (seller?.stripe_connect_account_id && sellerAmountCents > 0) {
       await stripe.transfers.create(

@@ -198,8 +198,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
 
   const total = cartItemsWithDetails.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
   const sellerOrderCount = Object.keys(itemsBySeller).length;
-  const serviceFeeTotal = sellerOrderCount * PLATFORM_SERVICE_FEE_EUR;
-  const payableTotal = total + serviceFeeTotal;
+  const payableTotal = total;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,10 +399,6 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <span className="font-bold text-stone-400 uppercase">Tooted:</span>
                 <span className="font-black text-stone-900">{total.toFixed(2)}€</span>
               </div>
-              <div className="flex justify-between items-center gap-4 text-sm">
-                <span className="font-bold text-stone-400 uppercase">Teenustasu:</span>
-                <span className="font-black text-stone-900">{serviceFeeTotal.toFixed(2)}€</span>
-              </div>
               <div className="flex justify-between items-center gap-4 pt-3 border-t border-stone-100">
                 <span className="text-sm font-bold text-stone-400 uppercase">Kokku tasuda:</span>
                 <span className="shrink-0 text-3xl font-black text-emerald-800">{payableTotal.toFixed(2)}€</span>
@@ -500,8 +495,13 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <div className="text-sm text-amber-900">
                   <p className="font-bold">Oluline info!</p>
                   <p className="opacity-80">
-                    Makse toimub turvaliselt Stripe'is. Ostja maksab 0.12€ teenustasu iga müüja tellimuse kohta ning toodete summa liigub müüjale.
+                    Makse toimub turvaliselt Stripe'is. Ostja maksab ainult toodete summa. Platvormitasu {PLATFORM_SERVICE_FEE_EUR.toFixed(2)}€ iga müüja tellimuse kohta ning Stripe'i teenustasu arvestatakse müüja väljamaksest maha.
                   </p>
+                  {sellerOrderCount > 1 && (
+                    <p className="opacity-80 mt-2">
+                      Ostukorvis on praegu {sellerOrderCount} eri müüjat, seega arvestatakse tasud iga müüja tellimuse pealt eraldi nende väljamakses.
+                    </p>
+                  )}
                 </div>
               </div>
 
