@@ -1,20 +1,20 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { User, UserRole, Language, Product, CartItem, Order, OrderStatus, Review, MarketplaceLocationFilter } from './types';
 import { TRANSLATIONS, CATEGORIES } from './constants';
 import Navbar from './components/Navbar';
 import HomeView from './views/HomeView';
-import CatalogView from './views/CatalogView';
-import GardenerDashboard from './views/GardenerDashboard';
-import AdminDashboard from './views/AdminDashboard';
-import ProductDetail from './views/ProductDetail';
-import OrdersView from './views/OrdersView';
-import ProfileView from './views/ProfileView';
-import CheckoutView from './views/CheckoutView';
 import { supabase } from './supabaseClient';
 import { confirmSellerSubscription } from './utils/payments';
 
 const LOCATION_FILTER_STORAGE_KEY = 'marketplace-location-filter-v1';
 const GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY = 'pending-gardener-subscription-session';
+const CatalogView = lazy(() => import('./views/CatalogView'));
+const GardenerDashboard = lazy(() => import('./views/GardenerDashboard'));
+const AdminDashboard = lazy(() => import('./views/AdminDashboard'));
+const ProductDetail = lazy(() => import('./views/ProductDetail'));
+const OrdersView = lazy(() => import('./views/OrdersView'));
+const ProfileView = lazy(() => import('./views/ProfileView'));
+const CheckoutView = lazy(() => import('./views/CheckoutView'));
 
 type SellerProfileSummary = {
   id: string;
@@ -141,6 +141,9 @@ const App: React.FC = () => {
   const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const isConfirmingGardenerSubscriptionRef = useRef(false);
+  const areReviewRepliesLoadedRef = useRef(false);
+  const [productScope, setProductScope] = useState<'idle' | 'home' | 'full'>('idle');
+  const [hasLoadedReviews, setHasLoadedReviews] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -295,7 +298,9 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const loadProducts = async () => {
+    let isCancelled = false;
+
+    const loadProducts = async (scope: 'home' | 'full') => {
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -319,7 +324,8 @@ const App: React.FC = () => {
         `)
         .eq('is_active', true)
         .eq('status', 'ACTIVE')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(scope === 'home' ? 4 : 1000);
 
       if (error) {
         showToast(error.message, 'error');
@@ -358,11 +364,43 @@ const App: React.FC = () => {
         };
       });
 
+      if (isCancelled) {
+        return;
+      }
+
       setProducts(mapped);
+      setProductScope(scope);
     };
 
-    loadProducts();
-  }, []);
+    if (productScope === 'full') {
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    if (currentView !== 'home') {
+      void loadProducts('full');
+
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    if (productScope !== 'idle') {
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadProducts('home');
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [currentView, productScope]);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -431,14 +469,21 @@ const App: React.FC = () => {
       setOrders(mapped);
     };
 
-    if (products.length > 0 && user) {
-      loadOrders();
-    } else {
+    if (!user) {
       setOrders([]);
+      return;
     }
-  }, [products, user]);
+
+    if (products.length === 0 || (currentView !== 'orders' && currentView !== 'dashboard')) {
+      return;
+    }
+
+    loadOrders();
+  }, [currentView, products, user]);
 
   useEffect(() => {
+    let isCancelled = false;
+
     const loadReviews = async () => {
       const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
@@ -461,6 +506,60 @@ const App: React.FC = () => {
         return;
       }
 
+      const mappedReviews: Review[] = (reviewsData || []).map((reviewRow: any) => ({
+        id: String(reviewRow.id),
+        orderId: reviewRow.order_id ? String(reviewRow.order_id) : null,
+        productId: String(reviewRow.product_id),
+        userId: String(reviewRow.user_id),
+        reviewerName: reviewRow.profiles?.full_name || 'Kasutaja',
+        rating: Number(reviewRow.rating ?? 0),
+        comment: String(reviewRow.comment ?? ''),
+        createdAt: String(reviewRow.created_at ?? ''),
+        replies: [],
+      }));
+
+      if (isCancelled) {
+        return;
+      }
+
+      setReviews(mappedReviews);
+      setHasLoadedReviews(true);
+    };
+
+    if (hasLoadedReviews) {
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    if (currentView !== 'home') {
+      void loadReviews();
+
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadReviews();
+    }, 900);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [currentView, hasLoadedReviews]);
+
+  useEffect(() => {
+    if (
+      areReviewRepliesLoadedRef.current ||
+      reviews.length === 0 ||
+      (currentView !== 'product' && currentView !== 'dashboard')
+    ) {
+      return;
+    }
+
+    const loadReviewReplies = async () => {
       const { data: repliesData, error: repliesError } = await supabase
         .from('review_replies')
         .select('id, review_id, user_id, user_name, text, role, created_at')
@@ -471,32 +570,36 @@ const App: React.FC = () => {
         return;
       }
 
-      const mappedReviews: Review[] = (reviewsData || []).map((reviewRow: any) => ({
-        id: String(reviewRow.id),
-        orderId: reviewRow.order_id ? String(reviewRow.order_id) : null,
-        productId: String(reviewRow.product_id),
-        userId: String(reviewRow.user_id),
-        reviewerName: reviewRow.profiles?.full_name || 'Kasutaja',
-        rating: Number(reviewRow.rating ?? 0),
-        comment: String(reviewRow.comment ?? ''),
-        createdAt: String(reviewRow.created_at ?? ''),
-        replies: (repliesData || [])
-          .filter((replyRow: any) => String(replyRow.review_id) === String(reviewRow.id))
-          .map((replyRow: any) => ({
-            id: String(replyRow.id),
-            userId: String(replyRow.user_id),
-            userName: String(replyRow.user_name),
-            text: String(replyRow.text ?? ''),
-            role: replyRow.role,
-            createdAt: String(replyRow.created_at ?? ''),
-          })),
-      }));
+      const repliesByReviewId = new Map<string, Review['replies']>();
 
-      setReviews(mappedReviews);
+      for (const replyRow of repliesData || []) {
+        const reviewId = String(replyRow.review_id);
+        const replies = repliesByReviewId.get(reviewId) ?? [];
+
+        replies.push({
+          id: String(replyRow.id),
+          userId: String(replyRow.user_id),
+          userName: String(replyRow.user_name),
+          text: String(replyRow.text ?? ''),
+          role: replyRow.role,
+          createdAt: String(replyRow.created_at ?? ''),
+        });
+
+        repliesByReviewId.set(reviewId, replies);
+      }
+
+      setReviews(prev =>
+        prev.map(review => ({
+          ...review,
+          replies: repliesByReviewId.get(String(review.id)) ?? review.replies ?? [],
+        }))
+      );
+
+      areReviewRepliesLoadedRef.current = true;
     };
 
-    loadReviews();
-  }, []);
+    loadReviewReplies();
+  }, [currentView, reviews]);
 
   useEffect(() => {
     localStorage.setItem('lang', language);
@@ -812,7 +915,17 @@ const App: React.FC = () => {
         onNotify={showToast}
       />
 
-      <main className="flex-grow">{renderView()}</main>
+      <main className="flex-grow">
+        <Suspense
+          fallback={
+            <div className="max-w-7xl mx-auto px-4 py-16 text-sm font-bold text-stone-500">
+              Laen sisu...
+            </div>
+          }
+        >
+          {renderView()}
+        </Suspense>
+      </main>
 
       {toast && (
         <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border-2 animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-red-50 border-red-500 text-red-800'}`}>
@@ -851,12 +964,12 @@ const App: React.FC = () => {
           <div>
             <h4 className="font-bold text-white mb-6 uppercase text-xs tracking-widest">Jälgi meid</h4>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all"><i className="fa-brands fa-facebook-f"></i></a>
-              <a href="#" className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all"><i className="fa-brands fa-instagram"></i></a>
+              <a aria-label="Facebook" href="#" className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all"><i className="fa-brands fa-facebook-f"></i></a>
+              <a aria-label="Instagram" href="#" className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all"><i className="fa-brands fa-instagram"></i></a>
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-stone-800 text-center opacity-40 text-[10px] uppercase tracking-widest">
+        <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-stone-800 text-center text-[11px] text-stone-400 uppercase tracking-widest">
           &copy; {new Date().getFullYear()} Aiast Koju Platvorm. Kõik õigused kaitstud.
         </div>
       </footer>
@@ -864,16 +977,16 @@ const App: React.FC = () => {
       {legalModal !== 'none' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl max-h-[80vh] overflow-y-auto relative">
-            <button onClick={() => setLegalModal('none')} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900"><i className="fa-solid fa-xmark text-xl"></i></button>
+            <button aria-label="Sulge infoaken" onClick={() => setLegalModal('none')} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900"><i className="fa-solid fa-xmark text-xl"></i></button>
             {legalModal === 'about' && (
-              <div className="prose prose-stone">
+              <div className="space-y-4 text-stone-700 leading-relaxed">
                 <h2 className="text-2xl font-bold mb-4">Meie lugu</h2>
                 <p>Aiast Koju sai alguse soovist tuua värske ja puhas eestimaine toidukraam lähemale neile, kes hindavad kvaliteeti ja kohalikku toodangut.</p>
                 <p>Oleme vahenduskeskkond, kus aednik saab mugavalt oma saaki pakkuda ja ostja leiab endale sobiva kraami otse peenra servalt.</p>
               </div>
             )}
             {legalModal === 'terms' && (
-              <div className="prose prose-stone">
+              <div className="space-y-4 text-stone-700 leading-relaxed">
                 <h2 className="text-2xl font-bold mb-4">Kasutustingimused</h2>
                 <p className="font-bold text-red-600">Oluline teada:</p>
                 <p>1. Aiast Koju on kuulutuste platvorm ja infovahetuskeskkond. Meie ei ole kaupade müüja ega tootja.</p>
@@ -883,7 +996,7 @@ const App: React.FC = () => {
               </div>
             )}
             {legalModal === 'privacy' && (
-              <div className="prose prose-stone">
+              <div className="space-y-4 text-stone-700 leading-relaxed">
                 <h2 className="text-2xl font-bold mb-4">Privaatsuspoliitika</h2>
                 <p>Teie andmete turvalisus on meile oluline. Kogume vaid hädavajalikku infot (nimi, e-post), et tagada platvormi toimimine.</p>
                 <p>Me ei jaga teie andmeid kolmandatele osapooltele turunduslikel eesmärkidel.</p>

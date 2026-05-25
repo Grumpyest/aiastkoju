@@ -258,7 +258,7 @@ const handleRegister = async (e: React.FormEvent) => {
                   <div className="fixed left-3 right-3 top-24 z-50 max-h-[calc(100svh-7rem)] bg-white shadow-2xl rounded-3xl border border-stone-100 overflow-hidden animate-fade-in flex flex-col md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-80 md:max-h-none md:rounded-2xl">
                     <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
                       <h3 className="font-bold text-stone-900 text-xs uppercase tracking-widest">Ostukorv</h3>
-                      <button onClick={() => setIsCartOpen(false)} className="text-stone-400 hover:text-stone-600"><i className="fa-solid fa-xmark"></i></button>
+                      <button aria-label="Sulge ostukorv" onClick={() => setIsCartOpen(false)} className="text-stone-400 hover:text-stone-600"><i className="fa-solid fa-xmark"></i></button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 md:max-h-80 md:flex-none">
                       {cart.length === 0 ? <p className="text-center text-stone-500 py-8 italic text-sm">Ostukorv on tühi</p> : cart.map(item => {
@@ -270,20 +270,20 @@ const handleRegister = async (e: React.FormEvent) => {
 
                         return (
                           <div key={item.productId} className="flex gap-3 rounded-2xl border border-stone-100 p-3">
-                            <img src={product?.image} className="w-14 h-14 rounded-xl object-cover bg-stone-100" />
+                            <img src={product?.image} alt="" loading="lazy" decoding="async" className="w-14 h-14 rounded-xl object-cover bg-stone-100" />
                             <div className="flex-grow min-w-0">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <p className="text-xs font-bold truncate">{product?.title}</p>
                                   <p className="text-[10px] text-stone-500 mt-1">{Number(product?.price ?? 0).toFixed(2)}€ / {product?.unit}</p>
                                 </div>
-                                <button onClick={() => onRemoveFromCart(item.productId)} className="text-xs text-red-500 font-bold whitespace-nowrap">Eemalda</button>
+                                <button aria-label={`Eemalda ${product?.title || 'toode'} ostukorvist`} onClick={() => onRemoveFromCart(item.productId)} className="text-xs text-red-500 font-bold whitespace-nowrap">Eemalda</button>
                               </div>
                               <div className="mt-3 flex items-center justify-between gap-3">
                                 <div className="inline-flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
-                                  <button onClick={() => onDecreaseQty(item.productId)} disabled={!canDecrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-minus text-[10px]"></i></button>
+                                  <button aria-label={`Vähenda toote ${product?.title || ''} kogust`} onClick={() => onDecreaseQty(item.productId)} disabled={!canDecrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-minus text-[10px]"></i></button>
                                   <span className="min-w-[20px] text-center text-sm font-black text-stone-900">{item.quantity}</span>
-                                  <button onClick={() => onIncreaseQty(item.productId)} disabled={!canIncrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-plus text-[10px]"></i></button>
+                                  <button aria-label={`Suurenda toote ${product?.title || ''} kogust`} onClick={() => onIncreaseQty(item.productId)} disabled={!canIncrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-plus text-[10px]"></i></button>
                                 </div>
                                 <span className="text-sm font-black text-stone-900">{(Number(product?.price ?? 0) * item.quantity).toFixed(2)}€</span>
                               </div>
@@ -304,8 +304,8 @@ const handleRegister = async (e: React.FormEvent) => {
 
             {user ? (
               <div className="flex items-center gap-3">
-                <button onClick={() => setCurrentView('profile')} className="w-9 h-9 rounded-full border border-stone-200 overflow-hidden hover:ring-2 hover:ring-emerald-500 transition-all">
-                  <img src={user.avatar || `https://i.pravatar.cc/150?u=${user.id}`} className="w-full h-full object-cover" />
+                <button aria-label="Ava profiil" onClick={() => setCurrentView('profile')} className="w-9 h-9 rounded-full border border-stone-200 overflow-hidden hover:ring-2 hover:ring-emerald-500 transition-all">
+                  <img src={user.avatar || `https://i.pravatar.cc/150?u=${user.id}`} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
                 <button onClick={(e) => handleLogout(e)} className="hidden sm:block text-stone-400 hover:text-red-500 transition-colors" title="Logi välja">
                   <i className="fa-solid fa-right-from-bracket"></i>
@@ -318,7 +318,7 @@ const handleRegister = async (e: React.FormEvent) => {
               </div>
             )}
 
-            <button onClick={() => setIsMenuOpen(true)} className="md:hidden p-2 text-stone-500 hover:text-emerald-600 transition-colors">
+            <button aria-label="Ava menüü" onClick={() => setIsMenuOpen(true)} className="md:hidden p-2 text-stone-500 hover:text-emerald-600 transition-colors">
               <i className="fa-solid fa-bars text-xl"></i>
             </button>
           </div>
@@ -336,7 +336,7 @@ const handleRegister = async (e: React.FormEvent) => {
               </div>
               <span className="font-bold text-emerald-900">Menüü</span>
             </div>
-            <button onClick={() => setIsMenuOpen(false)} className="text-stone-400 text-xl"><i className="fa-solid fa-xmark"></i></button>
+            <button aria-label="Sulge menüü" onClick={() => setIsMenuOpen(false)} className="text-stone-400 text-xl"><i className="fa-solid fa-xmark"></i></button>
           </div>
           <div className="p-6 space-y-2">
             <button onClick={() => navigateTo('home')} className={`block w-full text-left px-4 py-3 rounded-xl font-bold ${currentView === 'home' ? 'bg-emerald-50 text-emerald-700' : 'text-stone-600'}`}>{t.nav.home}</button>
@@ -375,7 +375,7 @@ const handleRegister = async (e: React.FormEvent) => {
       {authModal !== 'none' && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-md w-full shadow-2xl relative animate-fade-in overflow-y-auto max-h-[90vh]">
-            <button onClick={() => setAuthModal('none')} className="absolute top-6 right-6 text-stone-300 hover:text-stone-500 text-xl"><i className="fa-solid fa-xmark"></i></button>
+            <button aria-label="Sulge sisselogimise aken" onClick={() => setAuthModal('none')} className="absolute top-6 right-6 text-stone-300 hover:text-stone-500 text-xl"><i className="fa-solid fa-xmark"></i></button>
             
             {authModal === 'login' ? (
               <>

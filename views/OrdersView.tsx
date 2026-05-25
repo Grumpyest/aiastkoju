@@ -169,7 +169,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                       return (
                         <div key={idx} className="flex justify-between items-center text-sm gap-4">
                           <div className="flex items-center gap-3 min-w-0">
-                            <img src={product?.image} className="w-10 h-10 rounded object-cover bg-stone-100" />
+                            <img src={product?.image} alt="" loading="lazy" decoding="async" className="w-10 h-10 rounded object-cover bg-stone-100" />
                             <div className="min-w-0">
                               <p className="font-bold text-stone-800 truncate">{item.title}</p>
                               <p className="text-xs text-stone-500">{item.qty} {product?.unit || 'tk'} x {item.price}€</p>
@@ -186,7 +186,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                       <div className={`transition-all duration-300 ${openReviewOrderId === order.id ? '-translate-y-1' : 'translate-y-0'}`}>
                         <p className="text-xs font-bold text-stone-400 uppercase mb-2">Müüja kontakt</p>
                         <div className="flex items-center gap-3">
-                          <img src={`https://i.pravatar.cc/150?u=${order.sellerId}`} className="w-8 h-8 rounded-full" />
+                          <img src={`https://i.pravatar.cc/150?u=${order.sellerId}`} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded-full" />
                           <div>
                             <span className="block font-bold text-stone-700">{order.sellerName || 'Müüja'}</span>
                             {sellerMapUrl && order.sellerLocation && (
@@ -246,7 +246,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                           return (
                             <div key={idx} className="bg-white rounded-2xl border border-stone-200 p-4">
                               <div className="flex items-center gap-3 mb-4">
-                                <img src={product?.image} className="w-12 h-12 rounded-xl object-cover bg-stone-100" />
+                                <img src={product?.image} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover bg-stone-100" />
                                 <div>
                                   <p className="font-bold text-stone-800">{item.title}</p>
                                   <p className="text-xs text-stone-500">
@@ -267,6 +267,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                                       <button
                                         key={star}
                                         type="button"
+                                        aria-label={`${star} tärni viiest`}
                                         onClick={() => updateDraft(order.id, item.productId, { rating: star })}
                                         className="text-2xl leading-none transition-transform hover:scale-110"
                                       >

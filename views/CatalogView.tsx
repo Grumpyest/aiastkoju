@@ -538,6 +538,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                     >
                       <img
                         src={product.image || '/placeholder.png'}
+                        alt={product.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = '/placeholder.png';
@@ -566,7 +569,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                         >
                           {product.title}
                         </h3>
-                        <div className={`flex items-center gap-1 text-xs font-bold ${product.reviewsCount > 0 ? 'text-yellow-500' : 'text-stone-300'}`}>
+                        <div className={`flex items-center gap-1 text-xs font-bold ${product.reviewsCount > 0 ? 'text-amber-600' : 'text-stone-400'}`}>
                           <i className="fa-solid fa-star"></i>
                           <span>{product.reviewsCount > 0 ? product.rating.toFixed(1) : '—'}</span>
                         </div>
@@ -576,13 +579,13 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
                       <div className="flex items-center justify-between gap-3 mb-4 bg-stone-50/50 p-3 rounded-xl">
                         <div className="flex items-center gap-2 min-w-0">
-                          <img src={`https://i.pravatar.cc/150?u=${product.sellerId}`} className="w-6 h-6 rounded-full border border-white shadow-sm" />
+                          <img src={`https://i.pravatar.cc/150?u=${product.sellerId}`} alt="" loading="lazy" decoding="async" className="w-6 h-6 rounded-full border border-white shadow-sm" />
                           <div className="min-w-0">
                             <span className="block text-[11px] text-stone-600 font-bold uppercase tracking-wider truncate">{product.sellerName}</span>
-                            <span className="block text-[11px] text-stone-400 truncate">{product.sellerLocation || 'Asukoht puudub'}</span>
+                            <span className="block text-[11px] text-stone-500 truncate">{product.sellerLocation || 'Asukoht puudub'}</span>
                           </div>
                         </div>
-                        <span className="text-[11px] text-stone-400 font-medium whitespace-nowrap">
+                        <span className="text-[11px] text-stone-500 font-medium whitespace-nowrap">
                           {product.reviewsCount > 0 ? `${product.reviewsCount} arvustust` : 'Uus toode'}
                         </span>
                       </div>
@@ -598,9 +601,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                         <div className="flex justify-between items-center">
                           <div>
                             <span className="text-2xl font-black text-stone-900">{Number(product.price ?? 0).toFixed(2)}€</span>
-                            <span className="text-stone-400 text-xs font-bold ml-1 uppercase">/ {product.unit}</span>
+                            <span className="text-stone-500 text-xs font-bold ml-1 uppercase">/ {product.unit}</span>
                           </div>
                           <button
+                            aria-label={`Lisa ${product.title} ostukorvi`}
                             onClick={(e) => {
                               e.stopPropagation();
                               onAddToCart(product.id);

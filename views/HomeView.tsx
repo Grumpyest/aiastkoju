@@ -31,7 +31,18 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
       <section className="relative h-[500px] flex items-center justify-center px-4 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=80&w=2000"
+            src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=1600"
+            srcSet="
+              https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=768 768w,
+              https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=1280 1280w,
+              https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=1600 1600w
+            "
+            sizes="100vw"
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            decoding="async"
+            referrerPolicy="no-referrer"
             className="w-full h-full object-cover brightness-[0.4]"
           />
         </div>
@@ -60,7 +71,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
             </div>
             <button
               type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg active:scale-95"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg active:scale-95"
             >
               Otsi
             </button>
@@ -97,7 +108,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
             </div>
             <button
               onClick={() => onSearch('')}
-              className="text-emerald-600 font-bold hover:underline flex items-center gap-2 text-sm"
+              className="text-emerald-700 font-bold hover:underline flex items-center gap-2 text-sm"
             >
               Vaata kõiki <i className="fa-solid fa-arrow-right text-xs"></i>
             </button>
@@ -111,7 +122,13 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                 onClick={() => onViewProduct(product.id)}
               >
                 <div className="relative h-48 overflow-hidden">
-                  <img src={product.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <img
+                    src={product.image}
+                    alt={product.title}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
                   <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-emerald-700 shadow-sm">
                     {product.category}
                   </div>
@@ -120,7 +137,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                 <div className="p-5 flex-grow">
                   <div className="flex justify-between items-start gap-3 mb-2">
                     <h3 className="font-bold text-stone-900 text-lg leading-snug">{product.title}</h3>
-                    <div className={`flex items-center text-xs font-bold ${product.reviewsCount > 0 ? 'text-yellow-500' : 'text-stone-300'}`}>
+                    <div className={`flex items-center text-xs font-bold ${product.reviewsCount > 0 ? 'text-amber-600' : 'text-stone-400'}`}>
                       <i className="fa-solid fa-star mr-1"></i>
                       {product.reviewsCount > 0 ? product.rating.toFixed(1) : '—'}
                     </div>
@@ -131,11 +148,17 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-6 h-6 rounded-full bg-stone-200 overflow-hidden">
-                        <img src={`https://i.pravatar.cc/150?u=${product.sellerId}`} className="w-full h-full object-cover" />
+                        <img
+                          src={`https://i.pravatar.cc/150?u=${product.sellerId}`}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <span className="text-xs text-stone-600 font-medium truncate">{product.sellerName}</span>
                     </div>
-                    <span className="text-[11px] text-stone-400 whitespace-nowrap">
+                    <span className="text-[11px] text-stone-500 whitespace-nowrap">
                       {product.reviewsCount > 0 ? `${product.reviewsCount} arv.` : 'Uus'}
                     </span>
                   </div>
@@ -143,7 +166,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                   <div className="flex justify-between items-center mt-auto">
                     <div>
                       <span className="text-xl font-bold text-emerald-800">{product.price.toFixed(2)}€</span>
-                      <span className="text-stone-400 text-xs ml-1">/{product.unit}</span>
+                      <span className="text-stone-500 text-xs ml-1">/{product.unit}</span>
                     </div>
                     <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                       <i className="fa-solid fa-cart-plus"></i>

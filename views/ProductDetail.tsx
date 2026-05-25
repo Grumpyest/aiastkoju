@@ -111,6 +111,7 @@ useEffect(() => {
       <img
         src={mainImage}
         alt={product.title}
+        decoding="async"
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
       <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -134,6 +135,8 @@ useEffect(() => {
             <img
               src={img}
               alt={`${product.title} ${i + 1}`}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
             />
           </button>
@@ -163,9 +166,9 @@ useEffect(() => {
       <div className="flex items-center justify-between mb-8">
         <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
         <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
-          <button onClick={() => setQuantity(q => Math.max(minimumOrderQty, (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
+          <button aria-label="Vähenda kogust" onClick={() => setQuantity(q => Math.max(minimumOrderQty, (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
           <span className="text-xl font-black w-8 text-center">{quantity}</span>
-          <button onClick={() => setQuantity(q => Math.min(Number(product.stockQty ?? 999999), (q ?? 0) + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
+          <button aria-label="Suurenda kogust" onClick={() => setQuantity(q => Math.min(Number(product.stockQty ?? 999999), (q ?? 0) + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
         </div>
       </div>
 
@@ -202,7 +205,7 @@ useEffect(() => {
           {productReviews.length === 0 ? <p className="text-stone-400 text-center py-10">Sellel tootel pole veel arvustusi.</p> : productReviews.map(review => (
             <div key={review.id} className="space-y-6">
               <div className="flex gap-4">
-                <img src={`https://i.pravatar.cc/150?u=${review.userId}`} className="w-14 h-14 rounded-2xl border-2 border-white shadow-md shrink-0" />
+                <img src={`https://i.pravatar.cc/150?u=${review.userId}`} alt="" loading="lazy" decoding="async" className="w-14 h-14 rounded-2xl border-2 border-white shadow-md shrink-0" />
                 <div className="flex-grow">
                   <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm relative">
                     <div className="flex justify-between items-start mb-2">
@@ -267,13 +270,16 @@ useEffect(() => {
           onClick={() => setIsGalleryOpen(false)}
         >
            <button 
+             aria-label="Sulge galerii"
              onClick={(e) => { e.stopPropagation(); setIsGalleryOpen(false); }} 
              className="absolute top-8 right-8 text-white/40 hover:text-white text-4xl transition-all z-50"
            >
              <i className="fa-solid fa-xmark"></i>
            </button>
            <img 
-             src={mainImage} 
+             src={mainImage}
+             alt={product.title}
+             decoding="async"
              onClick={(e) => e.stopPropagation()} 
              className="max-w-full max-h-[80vh] object-contain rounded-3xl shadow-2xl cursor-default" 
            />
