@@ -197,7 +197,7 @@ export const removeBuyerPaymentCard = async () => {
   }
 
   if (!data?.success) {
-    throw new Error('Maksekaardi eemaldamine ebaÃµnnestus.');
+    throw new Error('Maksekaardi eemaldamine ebaõnnestus.');
   }
 
   return data;
@@ -219,7 +219,7 @@ export const confirmSellerSubscription = async (sessionId: string) => {
   }
 
   if (!data?.success) {
-    throw new Error('Aedniku kuutasu kinnitamine ebaõnnestus.');
+    throw new Error('Aedniku legacy staatuse kinnitamine ebaõnnestus.');
   }
 
   return data;
@@ -240,7 +240,33 @@ export const createSellerSubscriptionSession = async (body: Record<string, unkno
   }
 
   if (!data?.success && !data?.url && (!data?.clientSecret || !data?.publishableKey)) {
-    throw new Error('Aedniku kuutasu maksevaadet ei saadud luua.');
+    throw new Error('Aedniku staatust ei saanud aktiveerida.');
+  }
+
+  return data;
+};
+
+export const activateSellerStatus = async () => {
+  const result = await createSellerSubscriptionSession();
+
+  if (!result?.success) {
+    throw new Error('Aedniku staatust ei saanud aktiveerida.');
+  }
+
+  return result;
+};
+
+export const deactivateSellerStatus = async () => {
+  const { data, error } = await supabase.functions.invoke<{ ok?: boolean }>(
+    'payments-cancel-seller-subscription'
+  );
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  if (!data?.ok) {
+    throw new Error('Aedniku staatust ei saanud lõpetada.');
   }
 
   return data;

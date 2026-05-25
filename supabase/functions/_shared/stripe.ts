@@ -5,14 +5,18 @@ const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+export const assertSupabaseEnv = () => {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('SUPABASE_URL või SUPABASE_SERVICE_ROLE_KEY puudub Supabase Edge Function env-is.');
+  }
+};
+
 export const assertPaymentEnv = () => {
   if (!stripeSecretKey) {
     throw new Error('STRIPE_SECRET_KEY puudub Supabase Edge Function secrets hulgas.');
   }
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('SUPABASE_URL või SUPABASE_SERVICE_ROLE_KEY puudub Supabase Edge Function env-is.');
-  }
+  assertSupabaseEnv();
 };
 
 export const stripe = new Stripe(stripeSecretKey || 'sk_test_missing', {
@@ -56,7 +60,7 @@ export const normalizeOptionalEmail = (email?: string | null) => {
     return undefined;
   }
 
-  return email!.trim().toLowerCase();
+  return email.trim().toLowerCase();
 };
 
 const toAbsoluteSiteUrl = (value?: string | null) => {

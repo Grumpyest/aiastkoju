@@ -8,10 +8,6 @@ import {
   stripe,
   supabaseAdmin,
 } from '../_shared/stripe.ts';
-import {
-  isGardenerSubscriptionActive,
-  syncSellerSubscriptionFromStripeCustomer,
-} from '../_shared/subscriptions.ts';
 
 const cachedBuyerCardFromProfile = (profile: any) => {
   if (!profile.card_last4) {
@@ -59,10 +55,6 @@ Deno.serve(async (req) => {
     if (!profile) {
       return errorResponse('Profiili ei leitud.', 404);
     }
-
-    const syncedSubscription = !refreshStripe || isGardenerSubscriptionActive(profile.gardener_subscription_status)
-      ? null
-      : await syncSellerSubscriptionFromStripeCustomer(user.id, profile.stripe_customer_id);
 
     let buyerCard = cachedBuyerCardFromProfile(profile);
 
@@ -122,8 +114,8 @@ Deno.serve(async (req) => {
       payoutMethod,
       connect,
       subscription: {
-        id: syncedSubscription?.id || profile.stripe_subscription_id || null,
-        status: syncedSubscription?.status || profile.gardener_subscription_status || null,
+        id: profile.stripe_subscription_id || null,
+        status: profile.gardener_subscription_status || null,
       },
     });
   } catch (error) {

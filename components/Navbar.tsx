@@ -437,8 +437,8 @@ const handleRegister = async (e: React.FormEvent) => {
                     <label className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100 cursor-pointer">
                       <input type="checkbox" required checked={regData.termsAccepted} onChange={e => setRegData({...regData, termsAccepted: e.target.checked})} className="w-5 h-5 accent-emerald-600" />
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-amber-800 uppercase leading-tight">Nõustun aedniku kuutasuga (1€/kuu)</span>
-                        <span className="text-[8px] text-amber-700">Tasu debiteeritakse automaatselt kord kuus.</span>
+                        <span className="text-[10px] font-bold text-amber-800 uppercase leading-tight">Nõustun aedniku tingimustega</span>
+                        <span className="text-[8px] text-amber-700">Kuutasu puudub. Teenustasu lisandub ainult tellimuse checkoutis.</span>
                       </div>
                     </label>
                   )}

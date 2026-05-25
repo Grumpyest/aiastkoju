@@ -180,10 +180,10 @@ const App: React.FC = () => {
       }
 
       setCurrentView('profile');
-      showToast('Aedniku kuutasu makse õnnestus. Kinnitame staatust...', 'success');
+      showToast('Aedniku staatuse aktiveerimine õnnestus. Kontrollime staatust...', 'success');
     } else if (gardenerSubscription === 'cancelled') {
       setCurrentView('profile');
-      showToast('Aedniku kuutasu makse katkestati.', 'error');
+      showToast('Aedniku staatuse aktiveerimine katkestati.', 'error');
     }
 
     if (connect === 'return') {
