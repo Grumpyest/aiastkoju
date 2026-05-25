@@ -37,6 +37,18 @@ const getPayoutOnboardingMessage = (message?: string) => {
   return message;
 };
 
+const ORDER_STATUS_PRIORITY: Record<OrderStatus, number> = {
+  [OrderStatus.NEW]: 0,
+  [OrderStatus.CONFIRMED]: 1,
+  [OrderStatus.COMPLETED]: 2,
+  [OrderStatus.CANCELLED]: 3,
+};
+
+const getOrderSortValue = (createdAt?: string) => {
+  const timestamp = createdAt ? new Date(createdAt).getTime() : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
 const GardenerDashboard: React.FC<GardenerDashboardProps> = ({ 
   user, products, orders, reviews = [], setProducts, setOrders, setReviews, onNotify 
 }) => {
@@ -78,7 +90,21 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   });
 
   const myProducts = useMemo(() => products.filter(p => p.sellerId === user.id), [products, user.id]);
-  const myOrders = useMemo(() => orders.filter(o => o.sellerId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [orders, user.id]);
+  const myOrders = useMemo(
+    () =>
+      orders
+        .filter(o => o.sellerId === user.id)
+        .sort((a, b) => {
+          const statusDiff = ORDER_STATUS_PRIORITY[a.status] - ORDER_STATUS_PRIORITY[b.status];
+
+          if (statusDiff !== 0) {
+            return statusDiff;
+          }
+
+          return getOrderSortValue(b.createdAt) - getOrderSortValue(a.createdAt);
+        }),
+    [orders, user.id]
+  );
   const myReviews = useMemo(() => reviews.filter(r => myProducts.some(p => p.id === r.productId)), [reviews, myProducts]);
   
   const totalRevenue = myOrders.filter(o => o.status === OrderStatus.COMPLETED).reduce((acc, curr) => acc + curr.total, 0);
