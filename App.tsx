@@ -918,7 +918,7 @@ const App: React.FC = () => {
         onNotify={showToast}
       />
 
-      <main className="flex-grow">
+      <main className="grow">
         <Suspense
           fallback={
             <div className="max-w-7xl mx-auto px-4 py-16 text-sm font-bold text-stone-500">

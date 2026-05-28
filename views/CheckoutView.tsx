@@ -299,7 +299,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                               href={mapUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className={`text-sm font-bold underline decoration-transparent hover:decoration-current transition-all break-words ${distanceState.textClass}`}
+                              className={`text-sm font-bold underline decoration-transparent hover:decoration-current transition-all wrap-break-word ${distanceState.textClass}`}
                             >
                               {sellerLocation}
                             </a>
@@ -361,7 +361,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                     >
                                       <i className="fa-solid fa-minus text-[10px]"></i>
                                     </button>
-                                    <span className="min-w-[22px] text-center text-sm font-black text-stone-900">
+                                    <span className="min-w-5.5 text-center text-sm font-black text-stone-900">
                                       {item.quantity}
                                     </span>
                                     <button

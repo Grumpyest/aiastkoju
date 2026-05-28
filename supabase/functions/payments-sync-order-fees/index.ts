@@ -15,7 +15,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const getStripeFeeCents = async (paymentIntentId: string) => {
   for (let attempt = 0; attempt < 5; attempt++) {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-      expand: ['latest_charge.balance_transaction'],
+      expand: ['latest_charge'],
     });
     const latestCharge = paymentIntent.latest_charge;
 
@@ -23,7 +23,10 @@ const getStripeFeeCents = async (paymentIntentId: string) => {
       return 0;
     }
 
-    const balanceTransaction = latestCharge.balance_transaction;
+    const charge = await stripe.charges.retrieve(latestCharge.id, {
+      expand: ['balance_transaction'],
+    });
+    const balanceTransaction = charge.balance_transaction;
 
     if (balanceTransaction && typeof balanceTransaction !== 'string') {
       return Math.max(0, Number(balanceTransaction.fee || 0));
@@ -39,6 +42,21 @@ const getLatestChargeId = async (paymentIntentId: string) => {
   const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
   const latestCharge = paymentIntent.latest_charge;
   return typeof latestCharge === 'string' ? latestCharge : latestCharge?.id || undefined;
+};
+
+const getPaidSessionPaymentIntentId = async (checkoutSessionId?: string | null) => {
+  if (!checkoutSessionId) {
+    return null;
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+
+  if (session.payment_status !== 'paid') {
+    return null;
+  }
+
+  const paymentIntent = session.payment_intent;
+  return typeof paymentIntent === 'string' ? paymentIntent : paymentIntent?.id || null;
 };
 
 Deno.serve(async (req) => {
@@ -72,7 +90,10 @@ Deno.serve(async (req) => {
       return errorResponse('Tellimust ei leitud.', 404);
     }
 
-    if (order.payment_status !== 'paid' || !order.stripe_payment_intent_id) {
+    const paymentIntentId = order.stripe_payment_intent_id ||
+      await getPaidSessionPaymentIntentId(order.stripe_checkout_session_id);
+
+    if (!paymentIntentId) {
       return jsonResponse({
         id: order.id,
         stripeFeeCents: 0,
@@ -85,7 +106,7 @@ Deno.serve(async (req) => {
 
     const amountCents = Math.round(Number(order.total || 0) * 100);
     const platformFeeCents = Math.max(0, Number(order.platform_fee_cents || 0));
-    const stripeFeeCents = await getStripeFeeCents(String(order.stripe_payment_intent_id));
+    const stripeFeeCents = await getStripeFeeCents(String(paymentIntentId));
     const sellerNetCents = Math.max(0, amountCents - platformFeeCents - stripeFeeCents);
     let sellerTransferId = order.seller_transfer_id || null;
     const isWaitingForFeeTransfer = Number(order.seller_net_cents || 0) === 0;
@@ -101,7 +122,7 @@ Deno.serve(async (req) => {
         throw sellerError;
       }
 
-      const sourceTransaction = await getLatestChargeId(String(order.stripe_payment_intent_id));
+      const sourceTransaction = await getLatestChargeId(String(paymentIntentId));
 
       if (seller?.stripe_connect_account_id && sourceTransaction) {
         const transfer = await stripe.transfers.create(
@@ -128,6 +149,8 @@ Deno.serve(async (req) => {
     const { error: updateError } = await supabaseAdmin
       .from('orders')
       .update({
+        payment_status: 'paid',
+        stripe_payment_intent_id: String(paymentIntentId),
         stripe_fee_cents: stripeFeeCents,
         seller_net_cents: sellerNetCents,
         seller_transfer_id: sellerTransferId,

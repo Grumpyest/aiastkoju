@@ -34,7 +34,7 @@ const getStripeFeeCents = async (paymentIntentId?: string | null) => {
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-      expand: ['latest_charge.balance_transaction'],
+      expand: ['latest_charge'],
     });
     const latestCharge = paymentIntent.latest_charge;
 
@@ -42,7 +42,10 @@ const getStripeFeeCents = async (paymentIntentId?: string | null) => {
       return 0;
     }
 
-    const balanceTransaction = latestCharge.balance_transaction;
+    const charge = await stripe.charges.retrieve(latestCharge.id, {
+      expand: ['balance_transaction'],
+    });
+    const balanceTransaction = charge.balance_transaction;
 
     if (balanceTransaction && typeof balanceTransaction !== 'string') {
       return Math.max(0, Number(balanceTransaction.fee || 0));

@@ -405,7 +405,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
         </aside>
 
-        <main className="flex-grow min-w-0">
+        <main className="grow min-w-0">
           <div className="md:hidden mb-4 space-y-3">
             <button
               type="button"
@@ -561,7 +561,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="p-6 flex flex-col flex-grow">
+                    <div className="p-6 flex flex-col grow">
                       <div className="flex justify-between items-start gap-4 mb-3">
                         <h3
                           className="font-bold text-stone-900 text-lg hover:text-emerald-700 cursor-pointer transition-colors leading-tight"

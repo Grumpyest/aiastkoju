@@ -156,7 +156,6 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
 
   useEffect(() => {
     const missingFeeOrders = myOrders.filter(order =>
-      order.paymentStatus === 'paid' &&
       Number(order.stripeFeeCents ?? 0) === 0 &&
       !syncingFeeOrderIdsRef.current.has(order.id)
     );
@@ -900,13 +899,13 @@ const handleSaveEdit = async (e: React.FormEvent) => {
   {tab.label}
 
   {tab.id === 'orders' && activeTab !== 'orders' && pendingOrdersCount > 0 && (
-    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">
+    <span className="absolute -top-2 -right-2 min-w-4.5 h-4.5 px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">
       {pendingOrdersCount}
     </span>
   )}
 
   {tab.id === 'orders' && activeTab !== 'orders' && pendingOrdersCount === 0 && inProgressOrdersCount > 0 && (
-    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-white text-[10px] font-black flex items-center justify-center">
+    <span className="absolute -top-2 -right-2 min-w-4.5 h-4.5 px-1 rounded-full bg-amber-400 text-white text-[10px] font-black flex items-center justify-center">
       {inProgressOrdersCount}
     </span>
   )}
@@ -1206,7 +1205,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
             return (
               <div key={review.id} className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm flex gap-6">
                 <img src={`https://i.pravatar.cc/150?u=${review.userId}`} className="w-16 h-16 rounded-2xl shadow-sm border border-stone-50" />
-                <div className="flex-grow">
+                <div className="grow">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-black text-stone-900 text-sm">{review.reviewerName}</h4>
