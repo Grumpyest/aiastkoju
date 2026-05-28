@@ -25,6 +25,65 @@ const syncBuyerCard = async (userId?: string | null, customerId?: string | null)
     .eq('id', userId);
 };
 
+const getStripeFeeCents = async (paymentIntentId?: string | null) => {
+  if (!paymentIntentId) {
+    return 0;
+  }
+
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+    expand: ['latest_charge.balance_transaction'],
+  });
+  const latestCharge = paymentIntent.latest_charge;
+
+  if (!latestCharge || typeof latestCharge === 'string') {
+    return 0;
+  }
+
+  const balanceTransaction = latestCharge.balance_transaction;
+
+  if (!balanceTransaction || typeof balanceTransaction === 'string') {
+    return 0;
+  }
+
+  return Math.max(0, Number(balanceTransaction.fee || 0));
+};
+
+const allocateCents = (totalCents: number, rows: Array<{ id: string; amountCents: number }>) => {
+  const allocations = new Map<string, number>();
+  const safeTotalCents = Math.max(0, Math.round(totalCents));
+  const totalAmountCents = rows.reduce((sum, row) => sum + Math.max(0, row.amountCents), 0);
+
+  if (safeTotalCents === 0 || totalAmountCents === 0 || rows.length === 0) {
+    for (const row of rows) {
+      allocations.set(row.id, 0);
+    }
+
+    return allocations;
+  }
+
+  let allocatedCents = 0;
+  const remainders = rows.map(row => {
+    const rawShare = (safeTotalCents * Math.max(0, row.amountCents)) / totalAmountCents;
+    const cents = Math.floor(rawShare);
+    allocatedCents += cents;
+    allocations.set(row.id, cents);
+
+    return {
+      id: row.id,
+      remainder: rawShare - cents,
+    };
+  });
+
+  remainders.sort((a, b) => b.remainder - a.remainder);
+
+  for (let i = 0; i < safeTotalCents - allocatedCents; i++) {
+    const row = remainders[i % remainders.length];
+    allocations.set(row.id, (allocations.get(row.id) || 0) + 1);
+  }
+
+  return allocations;
+};
+
 const completeMarketplaceCheckout = async (session: any) => {
   const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
   const orderIds = String(session.metadata?.order_ids || '')
@@ -40,17 +99,19 @@ const completeMarketplaceCheckout = async (session: any) => {
     ? session.payment_intent
     : session.payment_intent?.id;
   let sourceTransaction: string | undefined;
+  let stripeFeeCents = 0;
 
   if (paymentIntentId) {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     sourceTransaction = typeof paymentIntent.latest_charge === 'string'
       ? paymentIntent.latest_charge
       : paymentIntent.latest_charge?.id;
+    stripeFeeCents = await getStripeFeeCents(paymentIntentId);
   }
 
   const { data: orders, error } = await supabaseAdmin
     .from('orders')
-    .select('id,seller_id,total,platform_fee_cents,payment_status')
+    .select('id,seller_id,total,platform_fee_cents,payment_status,stripe_fee_cents,seller_net_cents')
     .in('id', orderIds);
 
   if (error) {
@@ -68,21 +129,25 @@ const completeMarketplaceCheckout = async (session: any) => {
   }
 
   const sellersById = new Map((sellers || []).map((seller: any) => [String(seller.id), seller]));
+  const feeAllocations = allocateCents(
+    stripeFeeCents,
+    (orders || []).map((order: any) => ({
+      id: String(order.id),
+      amountCents: Math.round(Number(order.total || 0) * 100),
+    }))
+  );
 
   for (const order of orders || []) {
-    if (order.payment_status === 'paid') {
-      continue;
-    }
-
     const seller = sellersById.get(String(order.seller_id));
     const amountCents = Math.round(Number(order.total || 0) * 100);
     const platformFeeCents = Math.max(0, Number(order.platform_fee_cents || 0));
-    const sellerAmountCents = Math.max(0, amountCents - platformFeeCents);
+    const orderStripeFeeCents = Math.max(0, feeAllocations.get(String(order.id)) || 0);
+    const sellerNetCents = Math.max(0, amountCents - platformFeeCents - orderStripeFeeCents);
 
-    if (seller?.stripe_connect_account_id && sellerAmountCents > 0) {
+    if (order.payment_status !== 'paid' && seller?.stripe_connect_account_id && sellerNetCents > 0) {
       await stripe.transfers.create(
         {
-          amount: sellerAmountCents,
+          amount: sellerNetCents,
           currency: String(session.currency || 'eur'),
           destination: String(seller.stripe_connect_account_id),
           source_transaction: sourceTransaction,
@@ -103,6 +168,8 @@ const completeMarketplaceCheckout = async (session: any) => {
       .update({
         payment_status: 'paid',
         stripe_payment_intent_id: paymentIntentId || null,
+        stripe_fee_cents: orderStripeFeeCents,
+        seller_net_cents: sellerNetCents,
       })
       .eq('id', order.id);
   }
