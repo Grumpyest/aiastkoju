@@ -90,6 +90,36 @@ const allocateCents = (totalCents: number, rows: Array<{ id: string; amountCents
   return allocations;
 };
 
+const createSellerTransfer = async (options: {
+  orderId: string;
+  sellerAccountId?: string | null;
+  sellerNetCents: number;
+  currency: string;
+  sourceTransaction?: string;
+  checkoutSessionId: string;
+}) => {
+  if (!options.sellerAccountId || options.sellerNetCents <= 0 || !options.sourceTransaction) {
+    return null;
+  }
+
+  return await stripe.transfers.create(
+    {
+      amount: options.sellerNetCents,
+      currency: options.currency,
+      destination: options.sellerAccountId,
+      source_transaction: options.sourceTransaction,
+      transfer_group: `aiastkoju_${options.orderId}`,
+      metadata: {
+        order_id: options.orderId,
+        checkout_session_id: options.checkoutSessionId,
+      },
+    },
+    {
+      idempotencyKey: `transfer_${options.orderId}`,
+    }
+  );
+};
+
 const completeMarketplaceCheckout = async (session: any) => {
   const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
   const orderIds = String(session.metadata?.order_ids || '')
@@ -117,7 +147,7 @@ const completeMarketplaceCheckout = async (session: any) => {
 
   const { data: orders, error } = await supabaseAdmin
     .from('orders')
-    .select('id,seller_id,total,platform_fee_cents,payment_status,stripe_fee_cents,seller_net_cents')
+    .select('id,seller_id,total,platform_fee_cents,payment_status,stripe_fee_cents,seller_net_cents,seller_transfer_id')
     .in('id', orderIds);
 
   if (error) {
@@ -148,25 +178,22 @@ const completeMarketplaceCheckout = async (session: any) => {
     const amountCents = Math.round(Number(order.total || 0) * 100);
     const platformFeeCents = Math.max(0, Number(order.platform_fee_cents || 0));
     const orderStripeFeeCents = Math.max(0, feeAllocations.get(String(order.id)) || 0);
-    const sellerNetCents = Math.max(0, amountCents - platformFeeCents - orderStripeFeeCents);
+    const calculatedSellerNetCents = Math.max(0, amountCents - platformFeeCents - orderStripeFeeCents);
+    const sellerNetCents = orderStripeFeeCents > 0 ? calculatedSellerNetCents : 0;
 
-    if (order.payment_status !== 'paid' && seller?.stripe_connect_account_id && sellerNetCents > 0) {
-      await stripe.transfers.create(
-        {
-          amount: sellerNetCents,
-          currency: String(session.currency || 'eur'),
-          destination: String(seller.stripe_connect_account_id),
-          source_transaction: sourceTransaction,
-          transfer_group: `aiastkoju_${order.id}`,
-          metadata: {
-            order_id: String(order.id),
-            checkout_session_id: String(session.id),
-          },
-        },
-        {
-          idempotencyKey: `transfer_${order.id}`,
-        }
-      );
+    let sellerTransferId = order.seller_transfer_id || null;
+
+    if (order.payment_status !== 'paid' && orderStripeFeeCents > 0 && !sellerTransferId) {
+      const transfer = await createSellerTransfer({
+        orderId: String(order.id),
+        sellerAccountId: seller?.stripe_connect_account_id,
+        sellerNetCents: calculatedSellerNetCents,
+        currency: String(session.currency || 'eur'),
+        sourceTransaction,
+        checkoutSessionId: String(session.id),
+      });
+
+      sellerTransferId = transfer?.id || null;
     }
 
     await supabaseAdmin
@@ -176,6 +203,7 @@ const completeMarketplaceCheckout = async (session: any) => {
         stripe_payment_intent_id: paymentIntentId || null,
         stripe_fee_cents: orderStripeFeeCents,
         seller_net_cents: sellerNetCents,
+        seller_transfer_id: sellerTransferId,
       })
       .eq('id', order.id);
   }

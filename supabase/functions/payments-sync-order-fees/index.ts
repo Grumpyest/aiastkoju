@@ -35,6 +35,12 @@ const getStripeFeeCents = async (paymentIntentId: string) => {
   return 0;
 };
 
+const getLatestChargeId = async (paymentIntentId: string) => {
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  const latestCharge = paymentIntent.latest_charge;
+  return typeof latestCharge === 'string' ? latestCharge : latestCharge?.id || undefined;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -53,7 +59,7 @@ Deno.serve(async (req) => {
 
     const { data: order, error } = await supabaseAdmin
       .from('orders')
-      .select('id,seller_id,total,platform_fee_cents,payment_status,stripe_payment_intent_id')
+      .select('id,seller_id,total,platform_fee_cents,payment_status,stripe_payment_intent_id,stripe_checkout_session_id,seller_transfer_id,seller_net_cents,currency')
       .eq('id', orderId)
       .eq('seller_id', user.id)
       .maybeSingle();
@@ -81,12 +87,50 @@ Deno.serve(async (req) => {
     const platformFeeCents = Math.max(0, Number(order.platform_fee_cents || 0));
     const stripeFeeCents = await getStripeFeeCents(String(order.stripe_payment_intent_id));
     const sellerNetCents = Math.max(0, amountCents - platformFeeCents - stripeFeeCents);
+    let sellerTransferId = order.seller_transfer_id || null;
+    const isWaitingForFeeTransfer = Number(order.seller_net_cents || 0) === 0;
+
+    if (stripeFeeCents > 0 && !sellerTransferId && isWaitingForFeeTransfer) {
+      const { data: seller, error: sellerError } = await supabaseAdmin
+        .from('profiles')
+        .select('stripe_connect_account_id')
+        .eq('id', order.seller_id)
+        .maybeSingle();
+
+      if (sellerError) {
+        throw sellerError;
+      }
+
+      const sourceTransaction = await getLatestChargeId(String(order.stripe_payment_intent_id));
+
+      if (seller?.stripe_connect_account_id && sourceTransaction) {
+        const transfer = await stripe.transfers.create(
+          {
+            amount: sellerNetCents,
+            currency: String(order.currency || 'eur'),
+            destination: String(seller.stripe_connect_account_id),
+            source_transaction: sourceTransaction,
+            transfer_group: `aiastkoju_${order.id}`,
+            metadata: {
+              order_id: String(order.id),
+              checkout_session_id: String(order.stripe_checkout_session_id || ''),
+            },
+          },
+          {
+            idempotencyKey: `transfer_${order.id}`,
+          }
+        );
+
+        sellerTransferId = transfer.id;
+      }
+    }
 
     const { error: updateError } = await supabaseAdmin
       .from('orders')
       .update({
         stripe_fee_cents: stripeFeeCents,
         seller_net_cents: sellerNetCents,
+        seller_transfer_id: sellerTransferId,
       })
       .eq('id', order.id);
 
