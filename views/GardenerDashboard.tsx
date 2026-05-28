@@ -86,6 +86,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const payoutOnboardingRef = useRef<HTMLDivElement>(null);
   const connectInstanceRef = useRef<ReturnType<typeof loadConnectAndInitialize> | null>(null);
   const onNotifyRef = useRef(onNotify);
+  const syncingFeeOrderIdsRef = useRef(new Set<string>());
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
     title: '',
@@ -152,6 +153,56 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   useEffect(() => {
     onNotifyRef.current = onNotify;
   }, [onNotify]);
+
+  useEffect(() => {
+    const missingFeeOrders = myOrders.filter(order =>
+      order.paymentStatus === 'paid' &&
+      Number(order.stripeFeeCents ?? 0) === 0 &&
+      !syncingFeeOrderIdsRef.current.has(order.id)
+    );
+
+    if (missingFeeOrders.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const syncMissingFees = async () => {
+      for (const order of missingFeeOrders) {
+        syncingFeeOrderIdsRef.current.add(order.id);
+
+        const { data, error } = await supabase.functions.invoke<{
+          id: string;
+          stripeFeeCents: number;
+          sellerNetCents: number;
+        }>('payments-sync-order-fees', {
+          body: { orderId: order.id },
+        });
+
+        if (isCancelled || error || !data) {
+          continue;
+        }
+
+        setOrders(prev =>
+          prev.map(current =>
+            current.id === data.id
+              ? {
+                  ...current,
+                  stripeFeeCents: Number(data.stripeFeeCents ?? 0),
+                  sellerNetCents: Number(data.sellerNetCents ?? 0),
+                }
+              : current
+          )
+        );
+      }
+    };
+
+    void syncMissingFees();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [myOrders, setOrders]);
 
   useEffect(() => {
     let isCancelled = false;

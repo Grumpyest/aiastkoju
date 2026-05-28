@@ -25,27 +25,33 @@ const syncBuyerCard = async (userId?: string | null, customerId?: string | null)
     .eq('id', userId);
 };
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const getStripeFeeCents = async (paymentIntentId?: string | null) => {
   if (!paymentIntentId) {
     return 0;
   }
 
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-    expand: ['latest_charge.balance_transaction'],
-  });
-  const latestCharge = paymentIntent.latest_charge;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+      expand: ['latest_charge.balance_transaction'],
+    });
+    const latestCharge = paymentIntent.latest_charge;
 
-  if (!latestCharge || typeof latestCharge === 'string') {
-    return 0;
+    if (!latestCharge || typeof latestCharge === 'string') {
+      return 0;
+    }
+
+    const balanceTransaction = latestCharge.balance_transaction;
+
+    if (balanceTransaction && typeof balanceTransaction !== 'string') {
+      return Math.max(0, Number(balanceTransaction.fee || 0));
+    }
+
+    await delay(1000);
   }
 
-  const balanceTransaction = latestCharge.balance_transaction;
-
-  if (!balanceTransaction || typeof balanceTransaction === 'string') {
-    return 0;
-  }
-
-  return Math.max(0, Number(balanceTransaction.fee || 0));
+  return 0;
 };
 
 const allocateCents = (totalCents: number, rows: Array<{ id: string; amountCents: number }>) => {
