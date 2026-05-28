@@ -57,6 +57,23 @@ const getStripeFeeCents = async (paymentIntentId?: string | null) => {
   return 0;
 };
 
+const getStripeFeeCentsFromCharge = async (chargeId?: string | null) => {
+  if (!chargeId) {
+    return 0;
+  }
+
+  const charge = await stripe.charges.retrieve(chargeId, {
+    expand: ['balance_transaction'],
+  });
+  const balanceTransaction = charge.balance_transaction;
+
+  if (!balanceTransaction || typeof balanceTransaction === 'string') {
+    return 0;
+  }
+
+  return Math.max(0, Number(balanceTransaction.fee || 0));
+};
+
 const allocateCents = (totalCents: number, rows: Array<{ id: string; amountCents: number }>) => {
   const allocations = new Map<string, number>();
   const safeTotalCents = Math.max(0, Math.round(totalCents));
@@ -121,6 +138,78 @@ const createSellerTransfer = async (options: {
       idempotencyKey: `transfer_${options.orderId}`,
     }
   );
+};
+
+const updateMarketplaceOrderFees = async (options: {
+  paymentIntentId?: string | null;
+  sourceTransaction?: string | null;
+  stripeFeeCents: number;
+  currency?: string | null;
+}) => {
+  if (!options.paymentIntentId || options.stripeFeeCents <= 0) {
+    return;
+  }
+
+  const { data: orders, error } = await supabaseAdmin
+    .from('orders')
+    .select('id,seller_id,total,platform_fee_cents,payment_status,seller_net_cents,seller_transfer_id,stripe_checkout_session_id,currency')
+    .eq('stripe_payment_intent_id', options.paymentIntentId);
+
+  if (error) {
+    throw error;
+  }
+
+  const feeAllocations = allocateCents(
+    options.stripeFeeCents,
+    (orders || []).map((order: any) => ({
+      id: String(order.id),
+      amountCents: Math.round(Number(order.total || 0) * 100),
+    }))
+  );
+  const sellerIds = [...new Set((orders || []).map((order: any) => String(order.seller_id)).filter(Boolean))];
+  const { data: sellers, error: sellersError } = await supabaseAdmin
+    .from('profiles')
+    .select('id,stripe_connect_account_id')
+    .in('id', sellerIds);
+
+  if (sellersError) {
+    throw sellersError;
+  }
+
+  const sellersById = new Map((sellers || []).map((seller: any) => [String(seller.id), seller]));
+
+  for (const order of orders || []) {
+    const amountCents = Math.round(Number(order.total || 0) * 100);
+    const platformFeeCents = Math.max(0, Number(order.platform_fee_cents || 0));
+    const orderStripeFeeCents = Math.max(0, feeAllocations.get(String(order.id)) || 0);
+    const sellerNetCents = Math.max(0, amountCents - platformFeeCents - orderStripeFeeCents);
+    let sellerTransferId = order.seller_transfer_id || null;
+    const isWaitingForFeeTransfer = Number(order.seller_net_cents || 0) === 0;
+
+    if (!sellerTransferId && isWaitingForFeeTransfer) {
+      const seller = sellersById.get(String(order.seller_id));
+      const transfer = await createSellerTransfer({
+        orderId: String(order.id),
+        sellerAccountId: seller?.stripe_connect_account_id,
+        sellerNetCents,
+        currency: String(order.currency || options.currency || 'eur'),
+        sourceTransaction: options.sourceTransaction || undefined,
+        checkoutSessionId: String(order.stripe_checkout_session_id || ''),
+      });
+
+      sellerTransferId = transfer?.id || null;
+    }
+
+    await supabaseAdmin
+      .from('orders')
+      .update({
+        payment_status: 'paid',
+        stripe_fee_cents: orderStripeFeeCents,
+        seller_net_cents: sellerNetCents,
+        seller_transfer_id: sellerTransferId,
+      })
+      .eq('id', order.id);
+  }
 };
 
 const completeMarketplaceCheckout = async (session: any) => {
@@ -211,6 +300,13 @@ const completeMarketplaceCheckout = async (session: any) => {
       .eq('id', order.id);
   }
 
+  await updateMarketplaceOrderFees({
+    paymentIntentId,
+    sourceTransaction,
+    stripeFeeCents,
+    currency: String(session.currency || 'eur'),
+  });
+
   await syncBuyerCard(session.metadata?.buyer_id || null, customerId || null);
 };
 
@@ -280,6 +376,22 @@ Deno.serve(async (req) => {
             .in('id', orderIds)
             .eq('payment_status', 'pending');
         }
+        break;
+      }
+      case 'charge.succeeded':
+      case 'charge.updated': {
+        const charge = event.data.object as any;
+        const paymentIntentId = typeof charge.payment_intent === 'string'
+          ? charge.payment_intent
+          : charge.payment_intent?.id;
+        const stripeFeeCents = await getStripeFeeCentsFromCharge(charge.id);
+
+        await updateMarketplaceOrderFees({
+          paymentIntentId,
+          sourceTransaction: charge.id,
+          stripeFeeCents,
+          currency: charge.currency,
+        });
         break;
       }
       case 'customer.subscription.created':

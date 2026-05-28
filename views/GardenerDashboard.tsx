@@ -58,7 +58,13 @@ const hasFinalPayout = (order: Order) =>
   Number(order.sellerNetCents ?? 0) > 0 || Number(order.stripeFeeCents ?? 0) > 0;
 
 const getSellerPayout = (order: Order) =>
-  hasFinalPayout(order) ? centsToEuros(order.sellerNetCents) : getPayoutBeforeStripe(order);
+  centsToEuros(order.sellerNetCents);
+
+const getPayoutLabel = (order: Order) =>
+  hasFinalPayout(order) ? `${getSellerPayout(order).toFixed(2)}€` : 'Ootel';
+
+const getStripeFeeLabel = (order: Order) =>
+  hasFinalPayout(order) ? `${centsToEuros(order.stripeFeeCents).toFixed(2)}€` : 'Ootel';
 
 const GardenerDashboard: React.FC<GardenerDashboardProps> = ({ 
   user, products, orders, reviews = [], setProducts, setOrders, setReviews, onNotify 
@@ -122,7 +128,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const totalRevenue = myOrders.filter(o => o.status === OrderStatus.COMPLETED).reduce((acc, curr) => acc + curr.total, 0);
   const sellerPayoutTotal = myOrders
     .filter(o => o.status === OrderStatus.COMPLETED)
-    .reduce((acc, curr) => acc + getSellerPayout(curr), 0);
+    .reduce((acc, curr) => acc + (hasFinalPayout(curr) ? getSellerPayout(curr) : 0), 0);
   const pendingOrdersCount = myOrders.filter(o => o.status === OrderStatus.NEW).length;
   const inProgressOrdersCount = myOrders.filter(o => o.status === OrderStatus.CONFIRMED).length;
   const payoutStatus = paymentProfile?.connect?.payoutsEnabled
@@ -1103,7 +1109,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   <div className="text-right">
                     <p className="text-xl font-black text-emerald-700">{Number(order.total ?? 0).toFixed(2)}€</p>
                     <p className="text-[11px] text-stone-500 mt-1">
-                      Aedniku neto: {getSellerPayout(order).toFixed(2)}€
+                      Aedniku neto: {getPayoutLabel(order)}
                     </p>
                   </div>
                 </div>
@@ -1140,22 +1146,22 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                       <p className="font-black text-stone-900">{Number(order.total ?? 0).toFixed(2)}€</p>
                     </div>
                     <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Platvormitasu</p>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Sinu tasu</p>
                       <p className="font-black text-stone-900">{centsToEuros(order.platformFeeCents).toFixed(2)}€</p>
                     </div>
                     <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
                       <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Stripe tasu</p>
-                      <p className="font-black text-stone-900">{centsToEuros(order.stripeFeeCents).toFixed(2)}€</p>
+                      <p className="font-black text-stone-900">{getStripeFeeLabel(order)}</p>
                     </div>
                     <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
                       <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Aedniku neto</p>
-                      <p className="font-black text-emerald-700">{getSellerPayout(order).toFixed(2)}€</p>
+                      <p className="font-black text-emerald-700">{getPayoutLabel(order)}</p>
                     </div>
                   </div>
                   <p className="text-[11px] text-stone-500 mb-4">
                     {hasFinalPayout(order)
-                      ? 'Neto sisaldab Stripe webhookist salvestatud täpset töötlustasu.'
-                      : 'Täpne Stripe tasu lisandub siia pärast makse webhooki töötlemist.'}
+                      ? 'Sinu tasu jääb platvormile. Aedniku netost on maha arvestatud sinu tasu ja Stripe töötlustasu.'
+                      : `Stripe tasu on veel töötlemisel. Eeldatav neto enne Stripe tasu: ${getPayoutBeforeStripe(order).toFixed(2)}€.`}
                   </p>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Ostja soovid</p>
                   <p className="text-sm font-medium text-stone-700 leading-relaxed">{order.notes || 'Lisamärkusi ei lisatud.'}</p>
