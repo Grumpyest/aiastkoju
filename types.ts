@@ -93,6 +93,7 @@ export interface Order {
   platformFeeCents?: number;
   stripeFeeCents?: number;
   sellerNetCents?: number;
+  sellerTransferId?: string;
   items: {
     productId: string;
     title: string;

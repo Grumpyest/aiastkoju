@@ -10,7 +10,6 @@ const LOCATION_FILTER_STORAGE_KEY = 'marketplace-location-filter-v1';
 const GARDENER_SUBSCRIPTION_SESSION_STORAGE_KEY = 'pending-gardener-subscription-session';
 const CatalogView = lazy(() => import('./views/CatalogView'));
 const GardenerDashboard = lazy(() => import('./views/GardenerDashboard'));
-const AdminDashboard = lazy(() => import('./views/AdminDashboard'));
 const ProductDetail = lazy(() => import('./views/ProductDetail'));
 const OrdersView = lazy(() => import('./views/OrdersView'));
 const ProfileView = lazy(() => import('./views/ProfileView'));
@@ -111,7 +110,7 @@ const App: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
 
-  const [currentView, setCurrentView] = useState<'home' | 'catalog' | 'dashboard' | 'admin' | 'product' | 'orders' | 'profile' | 'checkout'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'catalog' | 'dashboard' | 'product' | 'orders' | 'profile' | 'checkout'>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<'none' | 'login' | 'register'>('none');
 
@@ -406,7 +405,25 @@ const App: React.FC = () => {
     const loadOrders = async () => {
       const { data: orderRows, error: orderErr } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          id,
+          buyer_id,
+          seller_id,
+          status,
+          payment_status,
+          total,
+          platform_fee_cents,
+          stripe_fee_cents,
+          seller_net_cents,
+          seller_transfer_id,
+          buyer_name,
+          buyer_phone,
+          buyer_email,
+          delivery_address,
+          notes,
+          created_at
+        `)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (orderErr) {
@@ -414,9 +431,13 @@ const App: React.FC = () => {
         return;
       }
 
-      const { data: itemRows, error: itemErr } = await supabase
-        .from('order_items')
-        .select('*');
+      const orderIds = (orderRows || []).map((orderRow: any) => String(orderRow.id)).filter(Boolean);
+      const { data: itemRows, error: itemErr } = orderIds.length > 0
+        ? await supabase
+            .from('order_items')
+            .select('order_id, product_id, quantity, unit_price')
+            .in('order_id', orderIds)
+        : { data: [], error: null };
 
       if (itemErr) {
         showToast(itemErr.message, 'error');
@@ -462,6 +483,7 @@ const App: React.FC = () => {
         platformFeeCents: Number(orderRow.platform_fee_cents ?? 0),
         stripeFeeCents: Number(orderRow.stripe_fee_cents ?? 0),
         sellerNetCents: Number(orderRow.seller_net_cents ?? 0),
+        sellerTransferId: orderRow.seller_transfer_id || '',
         createdAt: String(orderRow.created_at ?? ''),
         deliveryAddress: orderRow.delivery_address || '',
         notes: orderRow.notes || '',
@@ -797,18 +819,6 @@ const App: React.FC = () => {
             setReviews={setReviews}
             onNotify={showToast}
           />
-        ) : (
-          <HomeView
-            onSearch={onSearch}
-            onSelectCategory={onSelectCategory}
-            onViewProduct={onViewProduct}
-            t={t}
-            products={productsWithReviewStats}
-          />
-        );
-      case 'admin':
-        return user?.role === UserRole.ADMIN ? (
-          <AdminDashboard products={productsWithReviewStats} setProducts={setProducts} />
         ) : (
           <HomeView
             onSearch={onSearch}

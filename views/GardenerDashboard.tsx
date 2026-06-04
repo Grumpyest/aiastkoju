@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, YAxis } from 
 import { supabase } from '../supabaseClient';
 import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
 import { createConnectAccountSession, disconnectConnectAccount, getCachedPaymentProfile, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
+import { assertSafeImageFile, cleanText, cleanUrlPathPart, MAX_LONG_TEXT_LENGTH } from '../utils/security';
 
 interface GardenerDashboardProps {
   user: User;
@@ -81,6 +82,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const [removedEditImageUrls, setRemovedEditImageUrls] = useState<string[]>([]);
   const [paymentProfile, setPaymentProfile] = useState<PaymentProfileSummary | null>(null);
   const [paymentAction, setPaymentAction] = useState<string | null>(null);
+  const [syncingOrderId, setSyncingOrderId] = useState<string | null>(null);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [isPayoutOnboardingLoading, setIsPayoutOnboardingLoading] = useState(false);
   const [payoutOnboardingError, setPayoutOnboardingError] = useState<string | null>(null);
@@ -180,6 +182,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
           id: string;
           stripeFeeCents: number;
           sellerNetCents: number;
+          sellerTransferId?: string | null;
         }>('payments-sync-order-fees', {
           body: { orderId: order.id },
         });
@@ -195,6 +198,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
                   ...current,
                   stripeFeeCents: Number(data.stripeFeeCents ?? 0),
                   sellerNetCents: Number(data.sellerNetCents ?? 0),
+                  sellerTransferId: data.sellerTransferId || current.sellerTransferId,
                 }
               : current
           )
@@ -363,6 +367,54 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     }
   };
 
+  const syncOrderFees = async (orderId: string) => {
+    try {
+      setSyncingOrderId(orderId);
+
+      const { data, error } = await supabase.functions.invoke<{
+        id: string;
+        stripeFeeCents: number;
+        sellerNetCents: number;
+        sellerTransferId?: string | null;
+      }>('payments-sync-order-fees', {
+        body: { orderId },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Stripe vastus puudub.');
+      }
+
+      setOrders(prev =>
+        prev.map(order =>
+          order.id === data.id
+            ? {
+                ...order,
+                paymentStatus: 'paid',
+                stripeFeeCents: Number(data.stripeFeeCents ?? 0),
+                sellerNetCents: Number(data.sellerNetCents ?? 0),
+                sellerTransferId: data.sellerTransferId || order.sellerTransferId,
+              }
+            : order
+        )
+      );
+
+      onNotify?.(
+        data.sellerTransferId
+          ? 'Stripe sünkroniseeritud ja aedniku transfer tehtud.'
+          : 'Stripe sünkroniseeritud. Transfer ootab veel Stripe tasu.',
+        data.sellerTransferId ? 'success' : 'error'
+      );
+    } catch (error: any) {
+      onNotify?.(error?.message || 'Stripe sünkroniseerimine ebaõnnestus.', 'error');
+    } finally {
+      setSyncingOrderId(null);
+    }
+  };
+
   const removePayoutAccount = async () => {
     if (!paymentProfile?.connect?.accountId) {
       onNotify?.('Väljamakse konto on juba eemaldatud.', 'success');
@@ -423,7 +475,8 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .eq('seller_id', user.id);
 
     if (error) throw error;
 
@@ -485,10 +538,11 @@ setEditingProduct(prev => {
 
 };
 
-const safeName = (name: string) =>
-  name.replace(/[^a-zA-Z0-9._-]/g, "_");
+const safeName = (name: string) => cleanUrlPathPart(name);
 
 const uploadToStorage = async (file: File, path: string) => {
+  assertSafeImageFile(file);
+
   const { error } = await supabase.storage.from('product-images').upload(path, file, {
     cacheControl: '3600',
     upsert: true,
@@ -598,9 +652,9 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       .from('products')
       .insert([{
         seller_id: user.id,
-        title: newProduct.title,
-        description: newProduct.description ?? '',
-        category: newProduct.category ?? CATEGORIES[0],
+        title: cleanText(newProduct.title),
+        description: cleanText(newProduct.description, MAX_LONG_TEXT_LENGTH),
+        category: cleanText(newProduct.category ?? CATEGORIES[0]),
         price_cents: Math.round(Number(newProduct.price ?? 0) * 100),
         unit: newProduct.unit ?? UNITS[0],
         stock_qty: Number(newProduct.stockQty ?? 0),
@@ -709,15 +763,16 @@ const handleSaveEdit = async (e: React.FormEvent) => {
     const { error: updErr } = await supabase
       .from('products')
       .update({
-        title: editingProduct.title,
-        description: editingProduct.description ?? '',
-        category: editingProduct.category,
-        unit: editingProduct.unit,
+        title: cleanText(editingProduct.title),
+        description: cleanText(editingProduct.description, MAX_LONG_TEXT_LENGTH),
+        category: cleanText(editingProduct.category),
+        unit: cleanText(editingProduct.unit),
         stock_qty: Number(editingProduct.stockQty ?? 0),
         min_order_qty: Number(editingProduct.minOrderQty ?? 1),
         price_cents: Math.round(Number(editingProduct.price ?? 0) * 100),
       })
-      .eq('id', editingProduct.id);
+      .eq('id', editingProduct.id)
+      .eq('seller_id', user.id);
 
     if (updErr) throw updErr;
 
@@ -730,7 +785,8 @@ const handleSaveEdit = async (e: React.FormEvent) => {
       const { error: mainErr } = await supabase
         .from('products')
         .update({ image_url: mainUrl })
-        .eq('id', editingProduct.id);
+        .eq('id', editingProduct.id)
+        .eq('seller_id', user.id);
 
       if (mainErr) throw mainErr;
     }
@@ -818,7 +874,8 @@ const handleSaveEdit = async (e: React.FormEvent) => {
     const { error } = await supabase
       .from('products')
       .update({ is_active: false, status: ProductStatus.ARCHIVED })
-      .eq('id', productId);
+      .eq('id', productId)
+      .eq('seller_id', user.id);
 
     if (error) throw error;
 
@@ -1163,6 +1220,29 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                       ? 'Sinu tasu jääb platvormile. Aedniku netost on maha arvestatud sinu tasu ja Stripe töötlustasu.'
                       : `Stripe tasu on veel töötlemisel. Eeldatav neto enne Stripe tasu: ${getPayoutBeforeStripe(order).toFixed(2)}€.`}
                   </p>
+                  <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-white border border-stone-100 px-4 py-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Väljamakse staatus</p>
+                      <p className={`text-sm font-black ${order.sellerTransferId ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {order.sellerTransferId ? 'Transfer tehtud' : 'Transfer ootel'}
+                      </p>
+                      {order.sellerTransferId && (
+                        <p className="mt-1 text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                          {order.sellerTransferId}
+                        </p>
+                      )}
+                    </div>
+                    {!order.sellerTransferId && (
+                      <button
+                        type="button"
+                        onClick={() => syncOrderFees(order.id)}
+                        disabled={syncingOrderId === order.id}
+                        className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-black text-white transition-all hover:bg-stone-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {syncingOrderId === order.id ? 'Sünkroniseerin...' : 'Sünkroniseeri Stripe'}
+                      </button>
+                    )}
+                  </div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Ostja soovid</p>
                   <p className="text-sm font-medium text-stone-700 leading-relaxed">{order.notes || 'Lisamärkusi ei lisatud.'}</p>
                 </div>

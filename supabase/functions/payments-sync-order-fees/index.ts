@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
           0,
           Math.round(Number(order.total || 0) * 100) - Math.max(0, Number(order.platform_fee_cents || 0))
         ),
+        sellerTransferId: order.seller_transfer_id || null,
       });
     }
 
@@ -165,6 +166,7 @@ Deno.serve(async (req) => {
       id: order.id,
       stripeFeeCents,
       sellerNetCents,
+      sellerTransferId,
     });
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : 'Stripe tasu uuendamine ebaõnnestus.', 400);

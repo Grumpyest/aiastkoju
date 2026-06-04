@@ -30,6 +30,18 @@ interface CheckoutRequestBody {
   siteUrl?: string;
 }
 
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
+
+const cleanText = (value: unknown, maxLength = 240) =>
+  String(value ?? '')
+    .replace(CONTROL_CHARS, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+
+const cleanPhone = (value: unknown) =>
+  cleanText(value, 32).replace(/[^\d+()\-\s]/g, '');
+
 const toUuid = () => crypto.randomUUID();
 
 Deno.serve(async (req) => {
@@ -47,12 +59,17 @@ Deno.serve(async (req) => {
     const cancelUrl = buildSiteCallbackUrl(siteUrl, { payment: 'cancelled' });
     const buyer = body?.buyer as BuyerInput;
     const items = Array.isArray(body?.items) ? body.items as CheckoutItemInput[] : [];
+    const buyerName = cleanText(buyer?.name);
+    const buyerEmail = cleanText(buyer?.email, 254).toLowerCase();
+    const buyerPhone = cleanPhone(buyer?.phone);
+    const buyerAddress = cleanText(buyer?.address, 500);
+    const buyerNotes = cleanText(buyer?.notes, 1200);
 
-    if (!buyer?.name?.trim() || !buyer?.email?.trim() || !buyer?.phone?.trim()) {
+    if (!buyerName || !buyerEmail || !buyerPhone) {
       return errorResponse('Nimi, e-post ja telefon on makse jaoks kohustuslikud.', 400);
     }
 
-    if (!isValidEmail(buyer.email)) {
+    if (!isValidEmail(buyerEmail)) {
       return errorResponse('Palun sisesta korrektne e-posti aadress, näiteks nimi@example.com.', 400);
     }
 
@@ -156,11 +173,11 @@ Deno.serve(async (req) => {
           seller_id: sellerId,
           total: orderTotalCents / 100,
           status: 'NEW',
-          buyer_name: buyer.name.trim(),
-          buyer_email: buyer.email.trim().toLowerCase(),
-          buyer_phone: buyer.phone.trim(),
-          delivery_address: buyer.address?.trim() || null,
-          notes: buyer.notes?.trim() || null,
+          buyer_name: buyerName,
+          buyer_email: buyerEmail,
+          buyer_phone: buyerPhone,
+          delivery_address: buyerAddress || null,
+          notes: buyerNotes || null,
           payment_status: 'pending',
           platform_fee_cents: PLATFORM_FEE_CENTS,
           currency: MARKETPLACE_CURRENCY,
@@ -204,8 +221,8 @@ Deno.serve(async (req) => {
 
       if (!customerId) {
         const customer = await stripe.customers.create({
-          email: buyer.email.trim().toLowerCase(),
-          name: buyer.name.trim(),
+          email: buyerEmail,
+          name: buyerName,
           metadata: {
             supabase_user_id: user.id,
           },
@@ -222,7 +239,7 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       customer: customerId,
-      customer_email: customerId ? undefined : buyer.email.trim().toLowerCase(),
+      customer_email: customerId ? undefined : buyerEmail,
       payment_method_types: ['card'],
       line_items: cartItems.map(item => ({
         quantity: item.quantity,

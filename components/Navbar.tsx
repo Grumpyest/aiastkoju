@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { User, UserRole, Language, CartItem, Product } from '../types';
 import { supabase } from '../supabaseClient';
 import LocationAutocompleteInput from './LocationAutocompleteInput';
+import { cleanEmail, cleanPhone, cleanText } from '../utils/security';
 
 interface NavbarProps {
   currentView: string;
@@ -50,7 +51,7 @@ const Navbar: React.FC<NavbarProps> = ({
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
 
-  const email = loginData.email.trim().toLowerCase();
+  const email = cleanEmail(loginData.email);
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -124,14 +125,14 @@ const handleRegister = async (e: React.FormEvent) => {
   }
 
   const { data, error } = await supabase.auth.signUp({
-    email: regData.email,
+    email: cleanEmail(regData.email),
     password: regData.password,
     options: {
       data: {
-        full_name: regData.name,
-        username: regData.name,
-        phone: regData.phone,
-        location: regData.location,
+        full_name: cleanText(regData.name),
+        username: cleanText(regData.name),
+        phone: cleanPhone(regData.phone),
+        location: cleanText(regData.location, 240),
         is_seller: regData.role === UserRole.GARDENER,
       }
     }
@@ -166,8 +167,8 @@ const handleRegister = async (e: React.FormEvent) => {
     const { error: profileUpdateError } = await supabase
       .from('profiles')
       .update({
-        phone: regData.phone || null,
-        location: regData.location || null,
+        phone: cleanPhone(regData.phone) || null,
+        location: cleanText(regData.location, 240) || null,
       })
       .eq('id', data.user!.id);
 
@@ -178,10 +179,10 @@ const handleRegister = async (e: React.FormEvent) => {
 
   setUser({
     id: profile.id,
-    name: profile.full_name || regData.email.split('@')[0] || 'Kasutaja',
-    email: profile.email || regData.email,
-    phone: profile.phone || undefined,
-    location: regData.location || profile.location || undefined,
+    name: profile.full_name || cleanEmail(regData.email).split('@')[0] || 'Kasutaja',
+    email: profile.email || cleanEmail(regData.email),
+    phone: profile.phone || cleanPhone(regData.phone) || undefined,
+    location: cleanText(regData.location, 240) || profile.location || undefined,
     role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
     avatar: `https://i.pravatar.cc/150?u=${profile.id}`,
   });

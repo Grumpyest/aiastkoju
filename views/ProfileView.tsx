@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../supabaseClient';
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
+import { assertSafeImageFile, cleanEmail, cleanPhone, cleanText, cleanUrlPathPart } from '../utils/security';
 import {
   activateSellerStatus,
   deactivateSellerStatus,
@@ -35,7 +36,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
-  const safeName = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeName = (name: string) => cleanUrlPathPart(name);
   const isSellerStatusLoading =
     paymentAction === 'seller-status-on' || paymentAction === 'seller-status-off';
 
@@ -102,6 +103,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
   };
 
   const uploadAvatarToStorage = async (file: File, path: string) => {
+    assertSafeImageFile(file);
+
     const { error } = await supabase.storage.from('product-images').upload(path, file, {
       cacheControl: '3600',
       upsert: true,
@@ -156,10 +159,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
     e.preventDefault();
 
     try {
-      const nextName = formData.name.trim();
-      const nextEmail = formData.email.trim().toLowerCase();
-      const nextPhone = formData.phone.trim();
-      const nextLocation = formData.location.trim();
+      const nextName = cleanText(formData.name);
+      const nextEmail = cleanEmail(formData.email);
+      const nextPhone = cleanPhone(formData.phone);
+      const nextLocation = cleanText(formData.location, 240);
       const emailChanged = nextEmail !== user.email.trim().toLowerCase();
 
       const { error } = await supabase
@@ -228,8 +231,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
         return;
       }
 
-      const nextPhone = formData.phone.trim();
-      const nextLocation = formData.location.trim();
+      const nextPhone = cleanPhone(formData.phone);
+      const nextLocation = cleanText(formData.location, 240);
 
       if (!nextPhone || !nextLocation) {
         onNotify?.(

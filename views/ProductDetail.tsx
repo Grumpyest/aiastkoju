@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Product, User, Review, UserRole, ReviewReply } from '../types';
 import { supabase } from '../supabaseClient';
 import StarRating from '../components/StarRating';
+import { cleanText, MAX_LONG_TEXT_LENGTH } from '../utils/security';
 
 interface ProductDetailProps {
   product: Product;
@@ -55,15 +56,16 @@ useEffect(() => {
 }, [productReviews]);
 
  const handleReply = async (reviewId: string) => {
-  if (!user || !replyText.trim()) return;
+  const text = cleanText(replyText, MAX_LONG_TEXT_LENGTH);
+  if (!user || !text) return;
 
   const { data, error } = await supabase
     .from('review_replies')
     .insert({
       review_id: reviewId,
       user_id: user.id,
-      user_name: user.name,
-      text: replyText.trim(),
+      user_name: cleanText(user.name),
+      text,
       role: user.role,
     })
     .select()

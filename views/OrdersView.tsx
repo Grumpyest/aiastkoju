@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Order, OrderStatus, Product, Review, CartItem } from '../types';
 import { supabase } from '../supabaseClient';
 import { buildExternalMapUrl } from '../utils/location';
+import { cleanText, MAX_LONG_TEXT_LENGTH } from '../utils/security';
 
 interface OrdersViewProps {
   user: User;
@@ -54,7 +55,9 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
       return;
     }
 
-    if (!draft.comment.trim()) {
+    const comment = cleanText(draft.comment, MAX_LONG_TEXT_LENGTH);
+
+    if (!comment) {
       onNotify?.('Palun kirjuta arvustus.', 'error');
       return;
     }
@@ -68,7 +71,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
         product_id: productId,
         user_id: user.id,
         rating: draft.rating,
-        comment: draft.comment.trim(),
+        comment,
       })
       .select(`
         id,
