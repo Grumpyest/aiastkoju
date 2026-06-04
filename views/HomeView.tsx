@@ -31,7 +31,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
       <section className="relative h-[500px] flex items-center justify-center px-4 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="/natural-ingredients.png"
+            src="/gardenchoose1.jpg"
             alt=""
             aria-hidden="true"
             fetchPriority="high"
