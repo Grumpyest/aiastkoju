@@ -107,7 +107,14 @@ export const cancelActiveGardenerSubscription = async (
     return null;
   }
 
-  await stripe.subscriptions.cancel(subscriptionId);
+  try {
+    await stripe.subscriptions.cancel(subscriptionId);
+  } catch (error: any) {
+    if (error?.code !== 'resource_missing') {
+      throw error;
+    }
+  }
+
   return subscriptionId;
 };
 

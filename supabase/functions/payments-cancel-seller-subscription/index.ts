@@ -25,8 +25,8 @@ Deno.serve(async (req) => {
     await setSellerAccess({
       userId: user.id,
       isSeller: false,
-      subscriptionId: subscriptionId ?? (profile.stripe_subscription_id ? String(profile.stripe_subscription_id) : undefined),
-      subscriptionStatus: subscriptionId ? 'canceled' : null,
+      subscriptionId: null,
+      subscriptionStatus: null,
     });
 
     return jsonResponse({ ok: true });
