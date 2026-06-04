@@ -1187,7 +1187,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   <div>
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-4">Ostja:</p>
                     <div className="flex items-center gap-3">
-                      <img src={`https://i.pravatar.cc/150?u=${order.buyerId}`} className="w-10 h-10 rounded-xl shadow-sm" />
+                      <img src="/seeding.png" className="w-10 h-10 rounded-xl shadow-sm object-cover" />
                       <div>
                         <p className="text-sm font-bold text-stone-900">{order.buyerName}</p>
                         <p className="text-xs text-stone-500">{order.buyerPhone || order.buyerEmail}</p>
@@ -1290,7 +1290,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
             const product = products.find(p => p.id === review.productId);
             return (
               <div key={review.id} className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm flex gap-6">
-                <img src={`https://i.pravatar.cc/150?u=${review.userId}`} className="w-16 h-16 rounded-2xl shadow-sm border border-stone-50" />
+                <img src="/seeding.png" className="w-16 h-16 rounded-2xl shadow-sm border border-stone-50 object-cover" />
                 <div className="grow">
                   <div className="flex justify-between items-start mb-2">
                     <div>

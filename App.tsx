@@ -279,7 +279,7 @@ const App: React.FC = () => {
         phone: profile.phone || undefined,
         location: nextLocation || undefined,
         role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
-        avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`,
+        avatar: profile.avatar_url || '/seeding.png',
       });
     };
 

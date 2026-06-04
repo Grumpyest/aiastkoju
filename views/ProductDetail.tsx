@@ -207,7 +207,7 @@ useEffect(() => {
           {productReviews.length === 0 ? <p className="text-stone-400 text-center py-10">Sellel tootel pole veel arvustusi.</p> : productReviews.map(review => (
             <div key={review.id} className="space-y-6">
               <div className="flex gap-4">
-                <img src={`https://i.pravatar.cc/150?u=${review.userId}`} alt="" loading="lazy" decoding="async" className="w-14 h-14 rounded-2xl border-2 border-white shadow-md shrink-0" />
+                <img src="/seeding.png" alt="" loading="lazy" decoding="async" className="w-14 h-14 rounded-2xl border-2 border-white shadow-md shrink-0 object-cover" />
                 <div className="flex-grow">
                   <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm relative">
                     <div className="flex justify-between items-start mb-2">

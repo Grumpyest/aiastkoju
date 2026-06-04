@@ -98,7 +98,7 @@ const handleLogin = async (e: React.FormEvent) => {
     phone: profile.phone || undefined,
     location: nextLocation || undefined,
     role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
-    avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`,
+    avatar: profile.avatar_url || '/seeding.png',
   });
 
   setAuthModal('none');
@@ -184,7 +184,7 @@ const handleRegister = async (e: React.FormEvent) => {
     phone: profile.phone || cleanPhone(regData.phone) || undefined,
     location: cleanText(regData.location, 240) || profile.location || undefined,
     role: profile.is_seller ? UserRole.GARDENER : UserRole.BUYER,
-    avatar: `https://i.pravatar.cc/150?u=${profile.id}`,
+    avatar: '/seeding.png',
   });
 
   setAuthModal('none');
@@ -306,7 +306,7 @@ const handleRegister = async (e: React.FormEvent) => {
             {user ? (
               <div className="flex items-center gap-3">
                 <button aria-label="Ava profiil" onClick={() => setCurrentView('profile')} className="w-9 h-9 rounded-full border border-stone-200 overflow-hidden hover:ring-2 hover:ring-emerald-500 transition-all">
-                  <img src={user.avatar || `https://i.pravatar.cc/150?u=${user.id}`} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  <img src={user.avatar || '/seeding.png'} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
                 <button onClick={(e) => handleLogout(e)} className="hidden sm:block text-stone-400 hover:text-red-500 transition-colors" title="Logi välja">
                   <i className="fa-solid fa-right-from-bracket"></i>

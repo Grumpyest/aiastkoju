@@ -579,7 +579,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
                       <div className="flex items-center justify-between gap-3 mb-4 bg-stone-50/50 p-3 rounded-xl">
                         <div className="flex items-center gap-2 min-w-0">
-                          <img src={`https://i.pravatar.cc/150?u=${product.sellerId}`} alt="" loading="lazy" decoding="async" className="w-6 h-6 rounded-full border border-white shadow-sm" />
+                          <img src="/seeding.png" alt="" loading="lazy" decoding="async" className="w-6 h-6 rounded-full border border-white shadow-sm object-cover" />
                           <div className="min-w-0">
                             <span className="block text-[11px] text-stone-600 font-bold uppercase tracking-wider truncate">{product.sellerName}</span>
                             <span className="block text-[11px] text-stone-500 truncate">{product.sellerLocation || 'Asukoht puudub'}</span>

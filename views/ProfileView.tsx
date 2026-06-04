@@ -318,7 +318,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
                 disabled={isAvatarUploading}
               >
                 <img
-                  src={formData.avatar || `https://i.pravatar.cc/150?u=${user.id}`}
+                  src={formData.avatar || '/seeding.png'}
                   className={`h-full w-full object-cover transition duration-200 ${
                     isAvatarUploading ? 'opacity-70' : 'group-hover:blur-[2px]'
                   }`}

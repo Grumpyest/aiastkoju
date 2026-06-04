@@ -189,7 +189,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
                       <div className={`transition-all duration-300 ${openReviewOrderId === order.id ? '-translate-y-1' : 'translate-y-0'}`}>
                         <p className="text-xs font-bold text-stone-400 uppercase mb-2">Müüja kontakt</p>
                         <div className="flex items-center gap-3">
-                          <img src={`https://i.pravatar.cc/150?u=${order.sellerId}`} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded-full" />
+                          <img src="/seeding.png" alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded-full object-cover" />
                           <div>
                             <span className="block font-bold text-stone-700">{order.sellerName || 'Müüja'}</span>
                             {sellerMapUrl && order.sellerLocation && (

@@ -31,13 +31,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
       <section className="relative h-[500px] flex items-center justify-center px-4 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=1600"
-            srcSet="
-              https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=768 768w,
-              https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=1280 1280w,
-              https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=70&w=1600 1600w
-            "
-            sizes="100vw"
+            src="/natural-ingredients.png"
             alt=""
             aria-hidden="true"
             fetchPriority="high"
@@ -149,7 +143,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-6 h-6 rounded-full bg-stone-200 overflow-hidden">
                         <img
-                          src={`https://i.pravatar.cc/150?u=${product.sellerId}`}
+                          src="/seeding.png"
                           alt=""
                           loading="lazy"
                           decoding="async"
