@@ -1,9 +1,6 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
-import { assertPaymentEnv, getProfile, requireRequestUser } from '../_shared/stripe.ts';
-import {
-  cancelActiveGardenerSubscription,
-  setSellerAccess,
-} from '../_shared/subscriptions.ts';
+import { assertSupabaseEnv, getProfile, requireRequestUser } from '../_shared/stripe.ts';
+import { setSellerAccess } from '../_shared/subscriptions.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +8,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    assertPaymentEnv();
+    assertSupabaseEnv();
 
     const user = await requireRequestUser(req);
     const profile = await getProfile(user.id);
@@ -19,8 +16,6 @@ Deno.serve(async (req) => {
     if (!profile) {
       return errorResponse('Profiili ei leitud.', 404);
     }
-
-    const subscriptionId = await cancelActiveGardenerSubscription(user.id, profile);
 
     await setSellerAccess({
       userId: user.id,

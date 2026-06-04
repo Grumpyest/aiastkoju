@@ -28,15 +28,12 @@ Deno.serve(async (req) => {
     await setSellerAccess({
       userId: user.id,
       isSeller: true,
+      subscriptionId: null,
       subscriptionStatus: null,
     });
 
     return jsonResponse({
       success: true,
-      subscription: {
-        id: profile.stripe_subscription_id || null,
-        status: null,
-      },
     });
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : 'Aedniku staatust ei saanud aktiveerida.', 400);

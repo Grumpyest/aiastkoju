@@ -19,10 +19,6 @@ export interface PaymentProfileSummary {
     detailsSubmitted: boolean;
     disabledReason?: string | null;
   };
-  subscription?: {
-    id?: string | null;
-    status?: string | null;
-  };
 }
 
 export interface ConnectAccountSessionSummary {
@@ -30,19 +26,6 @@ export interface ConnectAccountSessionSummary {
   publishableKey?: string;
   error?: string;
   setupUrl?: string;
-}
-
-export interface PaymentCheckoutSessionSummary {
-  success?: boolean;
-  url?: string;
-  clientSecret?: string;
-  publishableKey?: string;
-  usedSavedCard?: boolean;
-  subscription?: {
-    id?: string | null;
-    status?: string | null;
-  };
-  error?: string;
 }
 
 export const maskLast4 = (last4?: string | null) => {
@@ -79,10 +62,6 @@ const paymentProfileFromRow = (row: any): PaymentProfileSummary => ({
     detailsSubmitted: Boolean(row?.stripe_connect_onboarding_complete),
     disabledReason: null,
   },
-  subscription: {
-    id: row?.stripe_subscription_id || null,
-    status: row?.gardener_subscription_status || null,
-  },
 });
 
 export const getCachedPaymentProfile = async (userId: string) => {
@@ -99,9 +78,7 @@ export const getCachedPaymentProfile = async (userId: string) => {
       stripe_connect_account_id,
       stripe_connect_charges_enabled,
       stripe_connect_payouts_enabled,
-      stripe_connect_onboarding_complete,
-      stripe_subscription_id,
-      gardener_subscription_status
+      stripe_connect_onboarding_complete
     `)
     .eq('id', userId)
     .maybeSingle();
@@ -203,57 +180,20 @@ export const removeBuyerPaymentCard = async () => {
   return data;
 };
 
-export const confirmSellerSubscription = async (sessionId: string) => {
-  const { data, error } = await supabase.functions.invoke<{
-    success?: boolean;
-    subscription?: {
-      id?: string | null;
-      status?: string | null;
-    };
-  }>('payments-confirm-seller-subscription', {
-    body: { sessionId },
-  });
-
-  if (error) {
-    throw new Error(await getFunctionErrorMessage(error));
-  }
-
-  if (!data?.success) {
-    throw new Error('Aedniku legacy staatuse kinnitamine ebaõnnestus.');
-  }
-
-  return data;
-};
-
-export const createSellerSubscriptionSession = async (body: Record<string, unknown> = {}) => {
-  const { data, error } = await supabase.functions.invoke<PaymentCheckoutSessionSummary>(
-    'payments-create-seller-subscription',
-    { body }
+export const activateSellerStatus = async () => {
+  const { data, error } = await supabase.functions.invoke<{ success?: boolean }>(
+    'payments-create-seller-subscription'
   );
 
   if (error) {
     throw new Error(await getFunctionErrorMessage(error));
   }
 
-  if (data?.error) {
-    throw new Error(data.error);
-  }
-
-  if (!data?.success && !data?.url && (!data?.clientSecret || !data?.publishableKey)) {
+  if (!data?.success) {
     throw new Error('Aedniku staatust ei saanud aktiveerida.');
   }
 
   return data;
-};
-
-export const activateSellerStatus = async () => {
-  const result = await createSellerSubscriptionSession();
-
-  if (!result?.success) {
-    throw new Error('Aedniku staatust ei saanud aktiveerida.');
-  }
-
-  return result;
 };
 
 export const deactivateSellerStatus = async () => {

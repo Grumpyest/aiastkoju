@@ -5,7 +5,6 @@ import {
   stripe,
   supabaseAdmin,
 } from '../_shared/stripe.ts';
-import { markSellerSubscription } from '../_shared/subscriptions.ts';
 
 const syncBuyerCard = async (userId?: string | null, customerId?: string | null) => {
   if (!userId || !customerId) {
@@ -346,20 +345,6 @@ Deno.serve(async (req) => {
           await syncBuyerCard(session.metadata?.user_id || null, customerId || null);
         }
 
-        if (session.mode === 'subscription' && session.metadata?.purpose === 'gardener_subscription') {
-          const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
-          const subscriptionId = typeof session.subscription === 'string'
-            ? session.subscription
-            : session.subscription?.id;
-
-          if (subscriptionId) {
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            await markSellerSubscription(subscription);
-          }
-
-          await syncBuyerCard(session.metadata?.user_id || null, customerId || null);
-        }
-
         break;
       }
       case 'checkout.session.expired': {
@@ -394,11 +379,6 @@ Deno.serve(async (req) => {
         });
         break;
       }
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-      case 'customer.subscription.deleted':
-        await markSellerSubscription(event.data.object);
-        break;
       default:
         break;
     }

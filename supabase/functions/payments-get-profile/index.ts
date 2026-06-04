@@ -113,10 +113,6 @@ Deno.serve(async (req) => {
       buyerCard,
       payoutMethod,
       connect,
-      subscription: {
-        id: profile.stripe_subscription_id || null,
-        status: profile.gardener_subscription_status || null,
-      },
     });
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : 'Makseandmeid ei saanud laadida.', 400);

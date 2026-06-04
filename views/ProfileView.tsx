@@ -366,7 +366,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
             <p className="relative z-10 mb-6 text-xs opacity-70">
               {user.role === UserRole.GARDENER
                 ? 'Aedniku konto on aktiivne. Halda tooteid töölaual.'
-                : 'Aedniku staatuse aktiveerimine on tasuta. Tellimustele lisandub ainult teenustasu checkoutis.'}
+                : 'Aedniku staatuse aktiveerimine on tasuta ja saad kohe müüja vaate avada.'}
             </p>
             <button
               onClick={toggleGardenerRole}
@@ -383,7 +383,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
                 ? 'Lõpetame staatust...'
                 : user.role === UserRole.GARDENER
                 ? 'Lõpeta aedniku staatus'
-                : 'Aktiveeri aedniku staatus'}
+                : 'Tahan hakata aednikuks'}
             </button>
           </div>
 
