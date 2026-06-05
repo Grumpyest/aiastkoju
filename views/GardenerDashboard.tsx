@@ -52,9 +52,6 @@ const getOrderSortValue = (createdAt?: string) => {
 
 const centsToEuros = (cents?: number) => Number(cents ?? 0) / 100;
 
-const getPayoutBeforeStripe = (order: Order) =>
-  Math.max(0, Number(order.total ?? 0) - centsToEuros(order.platformFeeCents));
-
 const hasFinalPayout = (order: Order) =>
   Number(order.sellerNetCents ?? 0) > 0 || Number(order.stripeFeeCents ?? 0) > 0;
 
@@ -64,8 +61,15 @@ const getSellerPayout = (order: Order) =>
 const getPayoutLabel = (order: Order) =>
   hasFinalPayout(order) ? `${getSellerPayout(order).toFixed(2)}€` : 'Ootel';
 
-const getStripeFeeLabel = (order: Order) =>
-  hasFinalPayout(order) ? `${centsToEuros(order.stripeFeeCents).toFixed(2)}€` : 'Ootel';
+const getServiceFeeLabel = (order: Order) => {
+  const platformFee = centsToEuros(order.platformFeeCents);
+
+  if (!hasFinalPayout(order)) {
+    return `${platformFee.toFixed(2)}€ + Stripe ootel`;
+  }
+
+  return `${(platformFee + centsToEuros(order.stripeFeeCents)).toFixed(2)}€`;
+};
 
 const GardenerDashboard: React.FC<GardenerDashboardProps> = ({ 
   user, products, orders, reviews = [], setProducts, setOrders, setReviews, onNotify 
@@ -82,7 +86,6 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
   const [removedEditImageUrls, setRemovedEditImageUrls] = useState<string[]>([]);
   const [paymentProfile, setPaymentProfile] = useState<PaymentProfileSummary | null>(null);
   const [paymentAction, setPaymentAction] = useState<string | null>(null);
-  const [syncingOrderId, setSyncingOrderId] = useState<string | null>(null);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [isPayoutOnboardingLoading, setIsPayoutOnboardingLoading] = useState(false);
   const [payoutOnboardingError, setPayoutOnboardingError] = useState<string | null>(null);
@@ -364,54 +367,6 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     } catch (error: any) {
       onNotify?.(error?.message || 'Väljamakse konto avamine ebaõnnestus.', 'error');
       setPaymentAction(null);
-    }
-  };
-
-  const syncOrderFees = async (orderId: string) => {
-    try {
-      setSyncingOrderId(orderId);
-
-      const { data, error } = await supabase.functions.invoke<{
-        id: string;
-        stripeFeeCents: number;
-        sellerNetCents: number;
-        sellerTransferId?: string | null;
-      }>('payments-sync-order-fees', {
-        body: { orderId },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('Stripe vastus puudub.');
-      }
-
-      setOrders(prev =>
-        prev.map(order =>
-          order.id === data.id
-            ? {
-                ...order,
-                paymentStatus: 'paid',
-                stripeFeeCents: Number(data.stripeFeeCents ?? 0),
-                sellerNetCents: Number(data.sellerNetCents ?? 0),
-                sellerTransferId: data.sellerTransferId || order.sellerTransferId,
-              }
-            : order
-        )
-      );
-
-      onNotify?.(
-        data.sellerTransferId
-          ? 'Stripe sünkroniseeritud ja aedniku transfer tehtud.'
-          : 'Stripe sünkroniseeritud. Transfer ootab veel Stripe tasu.',
-        data.sellerTransferId ? 'success' : 'error'
-      );
-    } catch (error: any) {
-      onNotify?.(error?.message || 'Stripe sünkroniseerimine ebaõnnestus.', 'error');
-    } finally {
-      setSyncingOrderId(null);
     }
   };
 
@@ -1197,51 +1152,19 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 </div>
 
                 <div className="md:col-span-2 bg-stone-50 rounded-2xl p-4">
-                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                     <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
                       <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Bruto</p>
                       <p className="font-black text-stone-900">{Number(order.total ?? 0).toFixed(2)}€</p>
                     </div>
                     <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Sinu tasu</p>
-                      <p className="font-black text-stone-900">{centsToEuros(order.platformFeeCents).toFixed(2)}€</p>
-                    </div>
-                    <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Stripe tasu</p>
-                      <p className="font-black text-stone-900">{getStripeFeeLabel(order)}</p>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Teenustasu</p>
+                      <p className="font-black text-stone-900">{getServiceFeeLabel(order)}</p>
                     </div>
                     <div className="rounded-xl bg-white px-4 py-3 border border-stone-100">
                       <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Aedniku neto</p>
                       <p className="font-black text-emerald-700">{getPayoutLabel(order)}</p>
                     </div>
-                  </div>
-                  <p className="text-[11px] text-stone-500 mb-4">
-                    {hasFinalPayout(order)
-                      ? 'Sinu tasu jääb platvormile. Aedniku netost on maha arvestatud sinu tasu ja Stripe töötlustasu.'
-                      : `Stripe tasu on veel töötlemisel. Eeldatav neto enne Stripe tasu: ${getPayoutBeforeStripe(order).toFixed(2)}€.`}
-                  </p>
-                  <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-white border border-stone-100 px-4 py-3">
-                    <div>
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Väljamakse staatus</p>
-                      <p className={`text-sm font-black ${order.sellerTransferId ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {order.sellerTransferId ? 'Transfer tehtud' : 'Transfer ootel'}
-                      </p>
-                      {order.sellerTransferId && (
-                        <p className="mt-1 text-[10px] font-bold text-stone-400 uppercase tracking-widest">
-                          {order.sellerTransferId}
-                        </p>
-                      )}
-                    </div>
-                    {!order.sellerTransferId && (
-                      <button
-                        type="button"
-                        onClick={() => syncOrderFees(order.id)}
-                        disabled={syncingOrderId === order.id}
-                        className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-black text-white transition-all hover:bg-stone-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {syncingOrderId === order.id ? 'Sünkroniseerin...' : 'Sünkroniseeri Stripe'}
-                      </button>
-                    )}
                   </div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Ostja soovid</p>
                   <p className="text-sm font-medium text-stone-700 leading-relaxed">{order.notes || 'Lisamärkusi ei lisatud.'}</p>
