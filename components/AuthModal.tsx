@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../supabaseClient';
 import LocationAutocompleteInput from './LocationAutocompleteInput';
@@ -23,6 +23,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify 
     role: UserRole.BUYER,
     termsAccepted: false,
   });
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMode('none');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setMode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,9 +176,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify 
   };
 
   return (
-    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-8 max-md w-full shadow-2xl relative animate-fade-in overflow-y-auto max-h-[90vh]">
-        <button aria-label="Sulge sisselogimise aken" onClick={() => setMode('none')} className="absolute top-6 right-6 text-stone-300 hover:text-stone-500 text-xl"><i className="fa-solid fa-xmark"></i></button>
+    <div
+      className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={() => setMode('none')}
+    >
+      <div
+        className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl relative animate-fade-in overflow-y-auto max-h-[90vh]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          aria-label="Sulge sisselogimise aken"
+          onClick={() => setMode('none')}
+          className="absolute top-5 right-5 flex h-10 w-10 items-center justify-center rounded-xl text-2xl font-black text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
+        >
+          ×
+        </button>
         {mode === 'login' ? (
           <>
             <h2 className="text-2xl font-black text-stone-900 mb-6">Logi sisse</h2>
