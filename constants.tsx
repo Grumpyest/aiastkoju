@@ -28,7 +28,7 @@ export const TRANSLATIONS: Record<Language, any> = {
       logout: "Logi välja"
     },
     hero: {
-      title: "Värske kraam otse aiast sinu lauale",
+      title: "Värske toit otse aiast sinu lauale",
       subtitle: "Toeta kohalikke aednikke ja naudi puhtaimat toitu.",
       searchPlaceholder: "Mida soovid täna leida?"
     },
