@@ -3,7 +3,6 @@ import { User, UserRole, Language, Product, CartItem, Order, OrderStatus, Review
 import { TRANSLATIONS, CATEGORIES } from './constants';
 import Navbar from './components/Navbar';
 import HomeView from './views/HomeView';
-import { supabase } from './supabaseClient';
 
 const LOCATION_FILTER_STORAGE_KEY = 'marketplace-location-filter-v1';
 const CatalogView = lazy(() => import('./views/CatalogView'));
@@ -13,6 +12,23 @@ const OrdersView = lazy(() => import('./views/OrdersView'));
 const ProfileView = lazy(() => import('./views/ProfileView'));
 const CheckoutView = lazy(() => import('./views/CheckoutView'));
 
+const getSupabaseClient = async () => {
+  const module = await import('./supabaseClient');
+  return module.supabase;
+};
+
+const deferInitialQuery = (callback: () => void, timeoutMs: number) => {
+  const idleCallback = window.requestIdleCallback;
+
+  if (idleCallback) {
+    const idleId = idleCallback(callback, { timeout: timeoutMs });
+    return () => window.cancelIdleCallback?.(idleId);
+  }
+
+  const timeoutId = window.setTimeout(callback, timeoutMs);
+  return () => window.clearTimeout(timeoutId);
+};
+
 type SellerProfileSummary = {
   id: string;
   full_name?: string | null;
@@ -20,6 +36,7 @@ type SellerProfileSummary = {
 };
 
 const loadSellerProfileSummaries = async (sellerIds: string[]) => {
+  const supabase = await getSupabaseClient();
   const sellersById = new Map<string, SellerProfileSummary>();
 
   if (sellerIds.length === 0) {
@@ -183,6 +200,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
+      const supabase = await getSupabaseClient();
       const { data: sess } = await supabase.auth.getSession();
       const supabaseUser = sess.session?.user;
 
@@ -231,14 +249,20 @@ const App: React.FC = () => {
 
     init();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        setUser(null);
-      }
+    let unsubscribe: (() => void) | null = null;
+
+    getSupabaseClient().then((supabase) => {
+      const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!session?.user) {
+          setUser(null);
+        }
+      });
+
+      unsubscribe = () => sub.subscription.unsubscribe();
     });
 
     return () => {
-      sub.subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
@@ -246,6 +270,7 @@ const App: React.FC = () => {
     let isCancelled = false;
 
     const loadProducts = async (scope: 'home' | 'full') => {
+      const supabase = await getSupabaseClient();
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -337,18 +362,19 @@ const App: React.FC = () => {
       };
     }
 
-    const timeoutId = window.setTimeout(() => {
+    const cancelDeferredQuery = deferInitialQuery(() => {
       void loadProducts('home');
-    }, 250);
+    }, 2500);
 
     return () => {
       isCancelled = true;
-      window.clearTimeout(timeoutId);
+      cancelDeferredQuery();
     };
   }, [currentView, productScope]);
 
   useEffect(() => {
     const loadOrders = async () => {
+      const supabase = await getSupabaseClient();
       const { data: orderRows, error: orderErr } = await supabase
         .from('orders')
         .select(`
@@ -456,6 +482,7 @@ const App: React.FC = () => {
     let isCancelled = false;
 
     const loadReviews = async () => {
+      const supabase = await getSupabaseClient();
       const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
         .select(`
@@ -511,13 +538,13 @@ const App: React.FC = () => {
       };
     }
 
-    const timeoutId = window.setTimeout(() => {
+    const cancelDeferredQuery = deferInitialQuery(() => {
       void loadReviews();
-    }, 900);
+    }, 4500);
 
     return () => {
       isCancelled = true;
-      window.clearTimeout(timeoutId);
+      cancelDeferredQuery();
     };
   }, [currentView, hasLoadedReviews]);
 
@@ -531,6 +558,7 @@ const App: React.FC = () => {
     }
 
     const loadReviewReplies = async () => {
+      const supabase = await getSupabaseClient();
       const { data: repliesData, error: repliesError } = await supabase
         .from('review_replies')
         .select('id, review_id, user_id, user_name, text, role, created_at')
