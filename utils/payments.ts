@@ -180,9 +180,10 @@ export const removeBuyerPaymentCard = async () => {
   return data;
 };
 
-export const activateSellerStatus = async () => {
-  const { data, error } = await supabase.functions.invoke<{ success?: boolean }>(
-    'payments-create-seller-subscription'
+export const setSellerStatus = async (isSeller: boolean) => {
+  const { data, error } = await supabase.functions.invoke<{ success?: boolean; isSeller?: boolean }>(
+    'payments-set-seller-status',
+    { body: { isSeller } }
   );
 
   if (error) {
@@ -190,28 +191,11 @@ export const activateSellerStatus = async () => {
   }
 
   if (!data?.success) {
-    throw new Error('Aedniku staatust ei saanud aktiveerida.');
+    throw new Error('Aedniku staatust ei saanud muuta.');
   }
 
   return data;
 };
-
-export const deactivateSellerStatus = async () => {
-  const { data, error } = await supabase.functions.invoke<{ ok?: boolean }>(
-    'payments-cancel-seller-subscription'
-  );
-
-  if (error) {
-    throw new Error(await getFunctionErrorMessage(error));
-  }
-
-  if (!data?.ok) {
-    throw new Error('Aedniku staatust ei saanud lõpetada.');
-  }
-
-  return data;
-};
-
 export const redirectToPaymentFunction = async (
   functionName: string,
   body: Record<string, unknown> = {}

@@ -4,14 +4,13 @@ import { supabase } from '../supabaseClient';
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
 import { assertSafeImageFile, cleanEmail, cleanPhone, cleanText, cleanUrlPathPart } from '../utils/security';
 import {
-  activateSellerStatus,
-  deactivateSellerStatus,
   getCachedPaymentProfile,
   getPaymentProfile,
   maskLast4,
   PaymentProfileSummary,
   redirectToPaymentFunction,
   removeBuyerPaymentCard,
+  setSellerStatus,
 } from '../utils/payments';
 
 interface ProfileViewProps {
@@ -225,7 +224,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
         }
 
         setPaymentAction('seller-status-off');
-        await deactivateSellerStatus();
+        await setSellerStatus(false);
         setUser({ ...user, role: UserRole.BUYER });
         onNotify?.('Aedniku staatus lõpetatud.', 'success');
         return;
@@ -272,7 +271,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
       } : prev));
 
       setPaymentAction('seller-status-on');
-      await activateSellerStatus();
+      await setSellerStatus(true);
       setUser(prev => (prev ? { ...prev, role: UserRole.GARDENER } : prev));
       onNotify?.('Aedniku staatus aktiveeritud.', 'success');
     } catch (err: any) {

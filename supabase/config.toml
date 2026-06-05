@@ -16,13 +16,7 @@ verify_jwt = false
 [functions.payments-remove-card]
 verify_jwt = false
 
-[functions.payments-create-seller-subscription]
-verify_jwt = false
-
-[functions.payments-confirm-seller-subscription]
-verify_jwt = false
-
-[functions.payments-cancel-seller-subscription]
+[functions.payments-set-seller-status]
 verify_jwt = false
 
 [functions.payments-create-checkout]
