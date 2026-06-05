@@ -569,7 +569,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                         >
                           {product.title}
                         </h3>
-                        <div className={`flex items-center gap-1 text-xs font-bold ${product.reviewsCount > 0 ? 'text-amber-600' : 'text-stone-400'}`}>
+                        <div className={`flex items-center gap-1 text-xs font-bold ${product.reviewsCount > 0 ? 'text-amber-700' : 'text-stone-500'}`}>
                           <i className="fa-solid fa-star"></i>
                           <span>{product.reviewsCount > 0 ? product.rating.toFixed(1) : '—'}</span>
                         </div>

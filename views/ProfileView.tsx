@@ -403,7 +403,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">Profiili seaded</h3>
               {(!formData.phone || !formData.location) && (
-                <span className="animate-pulse rounded-md bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-tight text-amber-600">
+                <span className="animate-pulse rounded-md bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-tight text-amber-800">
                   * Täida kontaktandmed, et hakata aednikuks
                 </span>
               )}

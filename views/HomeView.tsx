@@ -31,7 +31,9 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
       <section className="relative h-[500px] flex items-center justify-center px-4 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="/gardenchoose1.jpg"
+            src="/gardenchoose1-1600.jpg"
+            srcSet="/gardenchoose1-960.jpg 960w, /gardenchoose1-1600.jpg 1600w"
+            sizes="100vw"
             alt=""
             aria-hidden="true"
             fetchPriority="high"
@@ -131,7 +133,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                 <div className="p-5 flex-grow">
                   <div className="flex justify-between items-start gap-3 mb-2">
                     <h3 className="font-bold text-stone-900 text-lg leading-snug">{product.title}</h3>
-                    <div className={`flex items-center text-xs font-bold ${product.reviewsCount > 0 ? 'text-amber-600' : 'text-stone-400'}`}>
+                    <div className={`flex items-center text-xs font-bold ${product.reviewsCount > 0 ? 'text-amber-700' : 'text-stone-500'}`}>
                       <i className="fa-solid fa-star mr-1"></i>
                       {product.reviewsCount > 0 ? product.rating.toFixed(1) : '—'}
                     </div>
@@ -143,7 +145,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-6 h-6 rounded-full bg-stone-200 overflow-hidden">
                         <img
-                          src="/seeding.png"
+                          src="/seeding-64.png"
                           alt=""
                           loading="lazy"
                           decoding="async"

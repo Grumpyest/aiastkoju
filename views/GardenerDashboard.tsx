@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { User, Product, Order, OrderStatus, ProductStatus, Review } from '../types';
 import { CATEGORIES, UNITS } from '../constants';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, YAxis } from 'recharts';
 import { supabase } from '../supabaseClient';
 import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
 import { createConnectAccountSession, disconnectConnectAccount, getCachedPaymentProfile, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
@@ -424,6 +423,10 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     })
     .filter(d => d.revenue > 0);
 }, [myProducts, myOrders]);
+  const maxChartRevenue = useMemo(
+    () => Math.max(...chartData.map(item => item.revenue), 0),
+    [chartData]
+  );
 
  const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
   try {
@@ -941,7 +944,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
             </div>
             <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Uusi tellimusi</p>
-              <h3 className="text-2xl font-black text-amber-600">{pendingOrdersCount}</h3>
+              <h3 className="text-2xl font-black text-amber-700">{pendingOrdersCount}</h3>
             </div>
             <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Tooteid</p>
@@ -957,7 +960,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="flex items-start gap-4">
                 <div className={`w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm ${
-                  payoutStatus === 'ready' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                  payoutStatus === 'ready' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-800'
                 }`}>
                   <i className="fa-solid fa-building-columns text-xl"></i>
                 </div>
@@ -1001,31 +1004,29 @@ const handleSaveEdit = async (e: React.FormEvent) => {
             <h3 className="text-lg font-bold text-stone-900 mb-8 uppercase tracking-widest text-xs">Müük toote lõikes (€)</h3>
             <div className="h-64 w-full">
               {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
-                    <YAxis hide />
-                    <Tooltip 
-                      cursor={{ fill: 'transparent' }}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-xl">
-                              <p className="text-[10px] font-bold text-stone-400 uppercase mb-1">{payload[0].payload.fullName}</p>
-                              <p className="text-sm font-black text-emerald-700">{payload[0].value}€</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar dataKey="revenue" radius={[10, 10, 10, 10]} barSize={40}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#10b981' : '#059669'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="flex h-full items-end gap-4 overflow-x-auto pb-2">
+                  {chartData.map((item, index) => {
+                    const height = maxChartRevenue > 0
+                      ? Math.max(12, Math.round((item.revenue / maxChartRevenue) * 100))
+                      : 0;
+
+                    return (
+                      <div key={item.fullName} className="flex h-full min-w-16 flex-1 flex-col items-center justify-end gap-3">
+                        <div className="text-xs font-black text-emerald-700">
+                          {item.revenue.toFixed(2)}€
+                        </div>
+                        <div
+                          className={`w-10 rounded-xl ${index % 2 === 0 ? 'bg-emerald-500' : 'bg-emerald-700'}`}
+                          style={{ height: `${height}%` }}
+                          title={`${item.fullName}: ${item.revenue.toFixed(2)}€`}
+                        />
+                        <div className="max-w-20 truncate text-center text-[10px] font-bold text-stone-500">
+                          {item.name}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-stone-300">
                   <i className="fa-solid fa-chart-bar text-3xl mb-2"></i>
