@@ -1,6 +1,7 @@
 
 import React, { Suspense, lazy, useState } from 'react';
 import { User, UserRole, Language, CartItem, Product } from '../types';
+import { calculateLineTotal, getPriceBasisLabel } from '../utils/pricing';
 
 const AuthModal = lazy(() => import('./AuthModal'));
 
@@ -31,7 +32,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
   const cartTotal = cart.reduce((acc, item) => {
     const product = products.find(p => p.id === item.productId);
-    return acc + (product?.price || 0) * item.quantity;
+    return product ? acc + calculateLineTotal(product, item.quantity) : acc;
   }, 0);
   const cartItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -121,7 +122,7 @@ const Navbar: React.FC<NavbarProps> = ({
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <p className="text-xs font-bold truncate">{product?.title}</p>
-                                  <p className="text-[10px] text-stone-500 mt-1">{Number(product?.price ?? 0).toFixed(2)}€ / {product?.unit}</p>
+                                  <p className="text-[10px] text-stone-500 mt-1">{Number(product?.price ?? 0).toFixed(2)}€ {product ? getPriceBasisLabel(product) : ''}</p>
                                 </div>
                                 <button aria-label={`Eemalda ${product?.title || 'toode'} ostukorvist`} onClick={() => onRemoveFromCart(item.productId)} className="text-xs text-red-500 font-bold whitespace-nowrap">Eemalda</button>
                               </div>
@@ -131,7 +132,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                   <span className="min-w-[20px] text-center text-sm font-black text-stone-900">{item.quantity}</span>
                                   <button aria-label={`Suurenda toote ${product?.title || ''} kogust`} onClick={() => onIncreaseQty(item.productId)} disabled={!canIncrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-plus text-[10px]"></i></button>
                                 </div>
-                                <span className="text-sm font-black text-stone-900">{(Number(product?.price ?? 0) * item.quantity).toFixed(2)}€</span>
+                                <span className="text-sm font-black text-stone-900">{product ? calculateLineTotal(product, item.quantity).toFixed(2) : '0.00'}€</span>
                               </div>
                             </div>
                           </div>

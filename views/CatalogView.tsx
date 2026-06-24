@@ -3,6 +3,7 @@ import { MarketplaceLocationFilter, Product, ResolvedLocation, User } from '../t
 import { CATEGORIES } from '../constants';
 import LocationPickerModal from '../components/LocationPickerModal';
 import { calculateDistanceKm, formatDistanceKm, geocodeLocation } from '../utils/location';
+import { getPriceBasisLabel } from '../utils/pricing';
 
 interface CatalogViewProps {
   onViewProduct: (id: string) => void;
@@ -601,7 +602,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                         <div className="flex justify-between items-center">
                           <div>
                             <span className="text-2xl font-black text-stone-900">{Number(product.price ?? 0).toFixed(2)}€</span>
-                            <span className="text-stone-500 text-xs font-bold ml-1 uppercase">/ {product.unit}</span>
+                            <span className="text-stone-500 text-xs font-bold ml-1 uppercase">{getPriceBasisLabel(product)}</span>
                           </div>
                           <button
                             aria-label={`Lisa ${product.title} ostukorvi`}

@@ -3,6 +3,7 @@ import { User, Product, CartItem, Order, ResolvedLocation } from '../types';
 import { buildExternalMapUrl, calculateDistanceKm, formatDistanceKm, geocodeLocation } from '../utils/location';
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
 import { redirectToPaymentFunction } from '../utils/payments';
+import { calculateLineTotal, getPriceBasisLabel } from '../utils/pricing';
 
 interface CheckoutViewProps {
   user: User | null;
@@ -196,7 +197,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
     return distances;
   }, [buyerResolvedLocation, itemsBySeller, sellerResolvedLocations]);
 
-  const total = cartItemsWithDetails.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+  const total = cartItemsWithDetails.reduce((acc, curr) => acc + calculateLineTotal(curr, curr.quantity), 0);
   const sellerOrderCount = Object.keys(itemsBySeller).length;
   const payableTotal = total;
 
@@ -339,7 +340,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                   <div className="min-w-0">
                                     <p className="text-sm font-bold text-stone-900 truncate">{item.title}</p>
                                     <p className="text-[11px] text-stone-500 mt-1">
-                                      {Number(item.price ?? 0).toFixed(2)}€ / {item.unit}
+                                      {Number(item.price ?? 0).toFixed(2)}€ {getPriceBasisLabel(item)}
                                     </p>
                                   </div>
                                   <button
@@ -379,7 +380,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                       Minimaalne tellimus: {minQty} {item.unit}
                                     </p>
                                     <span className="shrink-0 text-base font-black text-stone-900">
-                                      {(item.price * item.quantity).toFixed(2)}€
+                                      {calculateLineTotal(item, item.quantity).toFixed(2)}€
                                     </span>
                                   </div>
                                 </div>

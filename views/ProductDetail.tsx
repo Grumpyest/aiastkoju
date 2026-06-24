@@ -4,6 +4,7 @@ import { Product, User, Review, UserRole, ReviewReply } from '../types';
 import { supabase } from '../supabaseClient';
 import StarRating from '../components/StarRating';
 import { cleanText, MAX_LONG_TEXT_LENGTH } from '../utils/security';
+import { getPriceBasisLabel } from '../utils/pricing';
 
 interface ProductDetailProps {
   product: Product;
@@ -160,7 +161,7 @@ useEffect(() => {
     <h1 className="text-4xl font-black text-stone-900 mb-4 tracking-tight leading-tight">{product.title}</h1>
     <p className="text-3xl text-emerald-700 font-black mb-8">
       {Number(product.price ?? 0).toFixed(2)}€
-      <span className="text-stone-400 text-sm font-medium">/ {product.unit ?? ''}</span>
+      <span className="text-stone-400 text-sm font-medium">{getPriceBasisLabel(product)}</span>
     </p>
     <p className="text-stone-600 leading-relaxed text-lg mb-10">{product.description ?? ''}</p>
 

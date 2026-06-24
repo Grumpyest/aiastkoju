@@ -6,6 +6,7 @@ import { supabase } from '../supabaseClient';
 import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
 import { createConnectAccountSession, disconnectConnectAccount, getCachedPaymentProfile, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
 import { assertSafeImageFile, cleanText, cleanUrlPathPart, MAX_LONG_TEXT_LENGTH } from '../utils/security';
+import { PRICE_BASIS_OPTIONS, getPriceBasisLabel, normalizePriceBasis } from '../utils/pricing';
 
 interface GardenerDashboardProps {
   user: User;
@@ -104,6 +105,7 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     category: CATEGORIES[0],
     unit: UNITS[0],
     price: 0,
+    priceBasis: 'per_unit',
     stockQty: 0,
     minOrderQty: 1,
     image: DEFAULT_IMAGE,
@@ -640,6 +642,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
         description: cleanText(newProduct.description, MAX_LONG_TEXT_LENGTH),
         category: cleanText(newProduct.category ?? CATEGORIES[0]),
         price_cents: Math.round(Number(newProduct.price ?? 0) * 100),
+        price_basis: normalizePriceBasis(newProduct.priceBasis),
         unit: newProduct.unit ?? UNITS[0],
         stock_qty: Number(newProduct.stockQty ?? 0),
         min_order_qty: Number(newProduct.minOrderQty ?? 1),
@@ -691,6 +694,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       description: created.description || '',
       category: created.category || CATEGORIES[0],
       price: (created.price_cents ?? 0) / 100,
+      priceBasis: normalizePriceBasis(created.price_basis),
       unit: created.unit || UNITS[0],
       stockQty: created.stock_qty ?? 0,
       minOrderQty: created.min_order_qty ?? 1,
@@ -725,6 +729,7 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
       category: CATEGORIES[0],
       unit: UNITS[0],
       price: 0,
+      priceBasis: 'per_unit',
       stockQty: 0,
       minOrderQty: 1,
       image: DEFAULT_IMAGE,
@@ -751,6 +756,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
         description: cleanText(editingProduct.description, MAX_LONG_TEXT_LENGTH),
         category: cleanText(editingProduct.category),
         unit: cleanText(editingProduct.unit),
+        price_basis: normalizePriceBasis(editingProduct.priceBasis),
         stock_qty: Number(editingProduct.stockQty ?? 0),
         min_order_qty: Number(editingProduct.minOrderQty ?? 1),
         price_cents: Math.round(Number(editingProduct.price ?? 0) * 100),
@@ -1113,7 +1119,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-stone-50">
                     <div>
                       <span className="text-xl font-black text-emerald-700">{Number(p.price ?? 0).toFixed(2)}€</span>
-                      <span className="text-stone-400 text-[10px] font-bold ml-1 uppercase">/ {p.unit}</span>
+                      <span className="text-stone-400 text-[10px] font-bold ml-1 uppercase">{getPriceBasisLabel(p)}</span>
                     </div>
                     <span className="text-[10px] font-bold text-stone-400 uppercase bg-stone-50 px-3 py-1 rounded-full">Laos: {p.stockQty}</span>
                  </div>
@@ -1315,6 +1321,15 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                   <input required type="number" step="0.01" value={newProduct.price === 0 ? '' : newProduct.price} onChange={(e)=>{const v=e.target.value; setNewProduct({...newProduct, price: v===''?0:parseFloat(v)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Hinna arvestus</label>
+                  <select required value={normalizePriceBasis(newProduct.priceBasis)} onChange={e => setNewProduct({...newProduct, priceBasis: normalizePriceBasis(e.target.value)})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold">
+                    {PRICE_BASIS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  <p className="px-1 text-[10px] font-medium text-stone-400">
+                    {PRICE_BASIS_OPTIONS.find(option => option.value === normalizePriceBasis(newProduct.priceBasis))?.description}
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Ühik</label>
                   <select required value={newProduct.unit} onChange={e => setNewProduct({...newProduct, unit: e.target.value})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold">
                     {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
@@ -1387,6 +1402,15 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Hind (€)</label>
                   <input required type="number" step="0.01" value={editingProduct.price === 0 ? '' : editingProduct.price} onChange={(e)=>{const v=e.target.value; setEditingProduct({...editingProduct, price: v===''?0:parseFloat(v)});}} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Hinna arvestus</label>
+                  <select required value={normalizePriceBasis(editingProduct.priceBasis)} onChange={e => setEditingProduct({...editingProduct, priceBasis: normalizePriceBasis(e.target.value)})} className="w-full p-4 bg-stone-50 rounded-2xl border border-stone-100 outline-none font-bold">
+                    {PRICE_BASIS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  <p className="px-1 text-[10px] font-medium text-stone-400">
+                    {PRICE_BASIS_OPTIONS.find(option => option.value === normalizePriceBasis(editingProduct.priceBasis))?.description}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Uhik</label>

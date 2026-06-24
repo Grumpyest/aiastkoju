@@ -44,6 +44,34 @@ const cleanPhone = (value: unknown) =>
 
 const toUuid = () => crypto.randomUUID();
 
+const normalizePriceBasis = (value?: string | null) => {
+  if (value === 'per_base_unit' || value === 'per_min_order') {
+    return value;
+  }
+
+  return 'per_unit';
+};
+
+const baseUnitDivisor = (unit?: string | null) =>
+  String(unit || '').trim().toLowerCase() === 'g' ? 1000 : 1;
+
+const calculateLineAmountCents = (product: any, quantity: number) => {
+  const priceCents = Math.max(0, Math.round(Number(product.price_cents || 0)));
+  const qty = Math.max(0, Number(quantity || 0));
+  const basis = normalizePriceBasis(product.price_basis);
+
+  if (basis === 'per_min_order') {
+    const minQty = Math.max(1, Number(product.min_order_qty || 1));
+    return Math.round((priceCents * qty) / minQty);
+  }
+
+  if (basis === 'per_base_unit') {
+    return Math.round((priceCents * qty) / baseUnitDivisor(product.unit));
+  }
+
+  return Math.round(priceCents * qty);
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -80,7 +108,7 @@ Deno.serve(async (req) => {
     const productIds = [...new Set(items.map(item => String(item.productId)).filter(Boolean))];
     const { data: productRows, error: productsError } = await supabaseAdmin
       .from('products')
-      .select('id,seller_id,title,price_cents,unit,stock_qty,min_order_qty,is_active,status')
+      .select('id,seller_id,title,price_cents,price_basis,unit,stock_qty,min_order_qty,is_active,status')
       .in('id', productIds);
 
     if (productsError) {
@@ -122,10 +150,16 @@ Deno.serve(async (req) => {
         throw new Error(`Toodet "${product.title}" pole piisavas koguses laos.`);
       }
 
+      const amountCents = calculateLineAmountCents(product, quantity);
+
+      if (amountCents <= 0) {
+        throw new Error(`Toote "${product.title}" hind peab olema suurem kui 0.`);
+      }
+
       return {
         product,
         quantity,
-        amountCents: Number(product.price_cents || 0) * quantity,
+        amountCents,
       };
     });
 
@@ -192,7 +226,7 @@ Deno.serve(async (req) => {
         product_id: item.product.id,
         seller_id: sellerId,
         quantity: item.quantity,
-        unit_price: Number(item.product.price_cents || 0) / 100,
+        unit_price: item.quantity > 0 ? (item.amountCents / 100) / item.quantity : 0,
       }));
 
       const { error: itemsError } = await supabaseAdmin
@@ -242,12 +276,12 @@ Deno.serve(async (req) => {
       customer_email: customerId ? undefined : buyerEmail,
       payment_method_types: ['card'],
       line_items: cartItems.map(item => ({
-        quantity: item.quantity,
+        quantity: 1,
         price_data: {
           currency: MARKETPLACE_CURRENCY,
-          unit_amount: Number(item.product.price_cents || 0),
+          unit_amount: item.amountCents,
           product_data: {
-            name: item.product.title || 'Aiast Koju toode',
+            name: `${item.product.title || 'Aiast Koju toode'} (${item.quantity} ${item.product.unit || 'tk'})`,
             metadata: {
               product_id: String(item.product.id),
             },

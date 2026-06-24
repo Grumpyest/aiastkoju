@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
+import { getPriceBasisLabel } from '../utils/pricing';
 
 interface HomeViewProps {
   onSearch: (query: string) => void;
@@ -162,7 +163,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
                   <div className="flex justify-between items-center mt-auto">
                     <div>
                       <span className="text-xl font-bold text-emerald-800">{product.price.toFixed(2)}€</span>
-                      <span className="text-stone-500 text-xs ml-1">/{product.unit}</span>
+                      <span className="text-stone-500 text-xs ml-1">{getPriceBasisLabel(product)}</span>
                     </div>
                     <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                       <i className="fa-solid fa-cart-plus"></i>

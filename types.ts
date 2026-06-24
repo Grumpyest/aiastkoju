@@ -62,6 +62,7 @@ export interface Product {
   description: string;
   category: string;
   price: number;
+  priceBasis?: PriceBasis;
   unit: string;
   stockQty: number;
   minOrderQty: number;
@@ -72,6 +73,8 @@ export interface Product {
   rating: number;
   reviewsCount: number;
 }
+
+export type PriceBasis = 'per_unit' | 'per_base_unit' | 'per_min_order';
 
 export interface CartItem {
   productId: string;
