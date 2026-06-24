@@ -25,5 +25,14 @@ verify_jwt = false
 [functions.payments-sync-order-fees]
 verify_jwt = false
 
+[functions.orders-update-status]
+verify_jwt = false
+
+[functions.reviews-create]
+verify_jwt = false
+
+[functions.review-replies-create]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false

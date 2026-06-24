@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product, User, Review, UserRole, ReviewReply } from '../types';
-import { supabase } from '../supabaseClient';
 import StarRating from '../components/StarRating';
 import { cleanText, MAX_LONG_TEXT_LENGTH } from '../utils/security';
 import { getPriceBasisLabel } from '../utils/pricing';
+import { createReviewReplySecurely } from '../utils/secureActions';
 
 interface ProductDetailProps {
   product: Product;
@@ -65,31 +65,14 @@ useEffect(() => {
   const text = cleanText(replyText, MAX_LONG_TEXT_LENGTH);
   if (!user || !text) return;
 
-  const { data, error } = await supabase
-    .from('review_replies')
-    .insert({
-      review_id: reviewId,
-      user_id: user.id,
-      user_name: cleanText(user.name),
-      text,
-      role: user.role,
-    })
-    .select()
-    .single();
+  let newReply: ReviewReply;
 
-  if (error) {
-    onNotify?.(error.message, 'error');
+  try {
+    newReply = await createReviewReplySecurely({ reviewId, text });
+  } catch (error: any) {
+    onNotify?.(error?.message || 'Vastust ei saanud salvestada.', 'error');
     return;
   }
-
-  const newReply: ReviewReply = {
-    id: String(data.id),
-    userId: String(data.user_id),
-    userName: String(data.user_name),
-    text: String(data.text),
-    role: data.role,
-    createdAt: String(data.created_at ?? ''),
-  };
 
   setReviews(prev =>
     prev.map(r =>

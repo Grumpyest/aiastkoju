@@ -102,7 +102,7 @@ export const getPaymentProfile = async (options: { refreshStripe?: boolean } = {
   return data ?? {};
 };
 
-const getFunctionErrorMessage = async (error: any) => {
+export const getFunctionErrorMessage = async (error: any) => {
   const fallback = error?.message || 'Makse tegevus ebaõnnestus.';
   const response = error?.context;
 

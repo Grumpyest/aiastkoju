@@ -7,6 +7,7 @@ import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
 import { createConnectAccountSession, disconnectConnectAccount, getCachedPaymentProfile, getPaymentProfile, PaymentProfileSummary } from '../utils/payments';
 import { assertSafeImageFile, cleanText, cleanUrlPathPart, MAX_LONG_TEXT_LENGTH } from '../utils/security';
 import { getAutomaticPriceHelpText, getPriceBasisLabel, inferPriceBasisFromUnit, normalizePriceBasis } from '../utils/pricing';
+import { updateOrderStatusSecurely } from '../utils/secureActions';
 
 interface GardenerDashboardProps {
   user: User;
@@ -458,19 +459,13 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
 
  const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
   try {
-    const { error } = await supabase
-      .from('orders')
-      .update({ status: newStatus })
-      .eq('id', orderId)
-      .eq('seller_id', user.id);
-
-    if (error) throw error;
+    const status = await updateOrderStatusSecurely(orderId, newStatus);
 
     setOrders(prev =>
-      prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
+      prev.map(o => o.id === orderId ? { ...o, status } : o)
     );
 
-    onNotify?.(`Tellimuse staatus uuendatud: ${newStatus}`, 'success');
+    onNotify?.(`Tellimuse staatus uuendatud: ${status}`, 'success');
   } catch (err: any) {
     onNotify?.(err?.message || 'Tellimuse staatuse uuendamine ebaõnnestus', 'error');
   }

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { User, Order, OrderStatus, Product, Review, CartItem } from '../types';
-import { supabase } from '../supabaseClient';
 import { buildExternalMapUrl } from '../utils/location';
 import { cleanText, MAX_LONG_TEXT_LENGTH } from '../utils/security';
+import { createReviewSecurely } from '../utils/secureActions';
 
 interface OrdersViewProps {
   user: User;
@@ -64,55 +64,22 @@ const OrdersView: React.FC<OrdersViewProps> = ({ user, orders, products, reviews
 
     updateDraft(orderId, productId, { saving: true });
 
-    const { data, error } = await supabase
-      .from('reviews')
-      .insert({
-        order_id: orderId,
-        product_id: productId,
-        user_id: user.id,
+    let review: Review;
+
+    try {
+      review = await createReviewSecurely({
+        orderId,
+        productId,
         rating: draft.rating,
         comment,
-      })
-      .select(`
-        id,
-        order_id,
-        product_id,
-        user_id,
-        rating,
-        comment,
-        created_at,
-        profiles:user_id (
-          full_name
-        )
-      `)
-      .single();
-
-    if (error) {
-      console.error(error);
-      onNotify?.(error.message || 'Arvustuse salvestamine ebaõnnestus.', 'error');
+      });
+    } catch (error: any) {
+      onNotify?.(error?.message || 'Arvustuse salvestamine ebaõnnestus.', 'error');
       updateDraft(orderId, productId, { saving: false });
       return;
     }
 
-    const profileData = data.profiles as any;
-    const reviewerName = Array.isArray(profileData)
-      ? profileData[0]?.full_name
-      : profileData?.full_name;
-
-    setReviews(prev => [
-      {
-        id: String(data.id),
-        orderId: data.order_id ? String(data.order_id) : null,
-        productId: String(data.product_id),
-        userId: String(data.user_id),
-        reviewerName: reviewerName || user.name || 'Kasutaja',
-        rating: Number(data.rating ?? 0),
-        comment: String(data.comment ?? ''),
-        createdAt: String(data.created_at ?? ''),
-        replies: [],
-      },
-      ...prev,
-    ]);
+    setReviews(prev => [review, ...prev]);
 
     updateDraft(orderId, productId, { rating: 5, comment: '', saving: false });
     onNotify?.('Arvustus lisatud!', 'success');
