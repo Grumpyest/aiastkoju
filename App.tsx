@@ -707,6 +707,19 @@ const App: React.FC = () => {
     );
   };
 
+  const handleSetCartQty = (productId: string, quantity: number) => {
+    const { minQty, maxQty } = getCartQuantityBounds(productId);
+    const nextQty = Math.min(maxQty, Math.max(minQty, Math.round(Number(quantity || minQty))));
+
+    setCart(prev =>
+      prev.map(item =>
+        item.productId === productId
+          ? { ...item, quantity: nextQty }
+          : item
+      )
+    );
+  };
+
   const handleRemoveFromCart = (productId: string) => {
     setCart(prev => prev.filter(item => item.productId !== productId));
     showToast('Toode eemaldatud.', 'success');
@@ -865,6 +878,7 @@ const App: React.FC = () => {
             products={productsWithReviewStats}
             onIncreaseQty={handleIncreaseCartQty}
             onDecreaseQty={handleDecreaseCartQty}
+            onSetQty={handleSetCartQty}
             onRemoveFromCart={handleRemoveFromCart}
             onComplete={completeOrder}
             onBack={() => setCurrentView('catalog')}
@@ -893,6 +907,7 @@ const App: React.FC = () => {
         cart={cart}
         onIncreaseQty={handleIncreaseCartQty}
         onDecreaseQty={handleDecreaseCartQty}
+        onSetQty={handleSetCartQty}
         onRemoveFromCart={handleRemoveFromCart}
         onCheckout={handleGoToCheckout}
         language={language}

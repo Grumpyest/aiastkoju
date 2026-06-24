@@ -19,7 +19,12 @@ interface ProductDetailProps {
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, user, reviews, setReviews, onAddToCart, onBuyNow, onBack, onNotify }) => {
   const minimumOrderQty = Math.max(1, Number(product.minOrderQty ?? 1));
+  const maximumOrderQty = Number(product.stockQty ?? 0) > 0 ? Number(product.stockQty ?? 0) : Number.MAX_SAFE_INTEGER;
   const [quantity, setQuantity] = useState<number>(minimumOrderQty);
+  const setSafeQuantity = (value: number) => {
+    const nextQty = Math.min(maximumOrderQty, Math.max(minimumOrderQty, Math.round(Number(value || minimumOrderQty))));
+    setQuantity(nextQty);
+  };
   
 const PLACEHOLDER = "/placeholder.png";
 
@@ -169,9 +174,17 @@ useEffect(() => {
       <div className="flex items-center justify-between mb-8">
         <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
         <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
-          <button aria-label="Vähenda kogust" onClick={() => setQuantity(q => Math.max(minimumOrderQty, (q ?? 0) - 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
-          <span className="text-xl font-black w-8 text-center">{quantity}</span>
-          <button aria-label="Suurenda kogust" onClick={() => setQuantity(q => Math.min(Number(product.stockQty ?? 999999), (q ?? 0) + 1))} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
+          <button aria-label="Vähenda kogust" onClick={() => setSafeQuantity(quantity - 1)} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
+          <input
+            aria-label="Muuda kogust"
+            type="number"
+            min={minimumOrderQty}
+            max={maximumOrderQty === Number.MAX_SAFE_INTEGER ? undefined : maximumOrderQty}
+            value={quantity}
+            onChange={e => setSafeQuantity(Number(e.target.value))}
+            className="w-20 bg-transparent text-center text-xl font-black outline-none"
+          />
+          <button aria-label="Suurenda kogust" onClick={() => setSafeQuantity(quantity + 1)} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
         </div>
       </div>
 

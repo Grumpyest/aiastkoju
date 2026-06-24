@@ -1,23 +1,5 @@
 import { Product, PriceBasis } from '../types';
 
-export const PRICE_BASIS_OPTIONS: Array<{ value: PriceBasis; label: string; description: string }> = [
-  {
-    value: 'per_unit',
-    label: 'Hind on valitud ühiku kohta',
-    description: 'Näiteks 12€ / tk või 12€ / g.',
-  },
-  {
-    value: 'per_base_unit',
-    label: 'Hind on baasühiku kohta',
-    description: 'Grammi puhul arvutatakse hind kilogrammi järgi, näiteks 100g 12€/kg = 1.20€.',
-  },
-  {
-    value: 'per_min_order',
-    label: 'Hind on minimaalse koguse kohta',
-    description: 'Näiteks min 100g ja hind 12€ tähendab, et 100g maksab 12€.',
-  },
-];
-
 export const normalizePriceBasis = (value?: string | null): PriceBasis => {
   if (value === 'per_base_unit' || value === 'per_min_order') {
     return value;
@@ -25,6 +7,14 @@ export const normalizePriceBasis = (value?: string | null): PriceBasis => {
 
   return 'per_unit';
 };
+
+export const inferPriceBasisFromUnit = (unit?: string | null): PriceBasis =>
+  String(unit || '').trim().toLowerCase() === 'g' ? 'per_base_unit' : 'per_unit';
+
+export const getAutomaticPriceHelpText = (unit?: string | null) =>
+  String(unit || '').trim().toLowerCase() === 'g'
+    ? 'Sisesta kilohind. Näiteks 12€/kg ja 100g tellimus arvutatakse automaatselt 1.20€.'
+    : 'Sisesta hind ühe valitud ühiku kohta.';
 
 const baseUnitDivisor = (unit?: string | null) => {
   const normalized = String(unit || '').trim().toLowerCase();

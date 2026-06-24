@@ -11,6 +11,7 @@ interface CheckoutViewProps {
   products: Product[];
   onIncreaseQty: (productId: string) => void;
   onDecreaseQty: (productId: string) => void;
+  onSetQty: (productId: string, quantity: number) => void;
   onRemoveFromCart: (productId: string) => void;
   onComplete: (orders: Order[]) => void;
   onBack: () => void;
@@ -68,6 +69,7 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
   products,
   onIncreaseQty,
   onDecreaseQty,
+  onSetQty,
   onRemoveFromCart,
   onComplete,
   onBack,
@@ -362,9 +364,15 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                     >
                                       <i className="fa-solid fa-minus text-[10px]"></i>
                                     </button>
-                                    <span className="min-w-5.5 text-center text-sm font-black text-stone-900">
-                                      {item.quantity}
-                                    </span>
+                                    <input
+                                      aria-label={`Muuda toote ${item.title} kogust`}
+                                      type="number"
+                                      min={minQty}
+                                      max={maxQty === Number.MAX_SAFE_INTEGER ? undefined : maxQty}
+                                      value={item.quantity}
+                                      onChange={e => onSetQty(item.productId, Number(e.target.value))}
+                                      className="w-16 bg-transparent text-center text-sm font-black text-stone-900 outline-none"
+                                    />
                                     <button
                                       type="button"
                                       onClick={() => onIncreaseQty(item.productId)}

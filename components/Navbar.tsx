@@ -13,6 +13,7 @@ interface NavbarProps {
   cart: CartItem[];
   onIncreaseQty: (id: string) => void;
   onDecreaseQty: (id: string) => void;
+  onSetQty: (id: string, quantity: number) => void;
   onRemoveFromCart: (id: string) => void;
   onCheckout: () => void;
   language: Language;
@@ -24,8 +25,8 @@ interface NavbarProps {
   onNotify?: (message: string, type: 'success' | 'error') => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ 
-  currentView, setCurrentView, user, setUser, cart, onIncreaseQty, onDecreaseQty, onRemoveFromCart, onCheckout, language, setLanguage, t, products, authModal, setAuthModal, onNotify 
+const Navbar: React.FC<NavbarProps> = ({
+  currentView, setCurrentView, user, setUser, cart, onIncreaseQty, onDecreaseQty, onSetQty, onRemoveFromCart, onCheckout, language, setLanguage, t, products, authModal, setAuthModal, onNotify
 }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,7 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({
     const product = products.find(p => p.id === item.productId);
     return product ? acc + calculateLineTotal(product, item.quantity) : acc;
   }, 0);
-  const cartItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const cartItemsCount = cart.length;
 
   const handleLogout = async (e?: React.MouseEvent) => {
   if (e) {
@@ -59,7 +60,7 @@ const Navbar: React.FC<NavbarProps> = ({
     <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-stone-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          
+
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigateTo('home')}>
               <div className="w-9 h-9 bg-emerald-600 rounded-full flex items-center justify-center text-white">
@@ -70,8 +71,8 @@ const Navbar: React.FC<NavbarProps> = ({
 
             <div className="hidden sm:flex gap-1 bg-stone-100 p-1 rounded-lg">
               {(['ET', 'EN', 'RU'] as Language[]).map(lang => (
-                <button 
-                  key={lang} 
+                <button
+                  key={lang}
                   onClick={() => setLanguage(lang)}
                   className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${language === lang ? 'bg-white text-emerald-700 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
                 >
@@ -80,7 +81,7 @@ const Navbar: React.FC<NavbarProps> = ({
               ))}
             </div>
           </div>
-          
+
           <div className="hidden md:flex flex-grow justify-center space-x-8">
             <button onClick={() => setCurrentView('home')} className={`${currentView === 'home' ? 'text-emerald-700 font-bold' : 'text-stone-500'} text-sm font-medium transition-colors`}>{t.nav.home}</button>
             <button onClick={() => setCurrentView('catalog')} className={`${currentView === 'catalog' ? 'text-emerald-700 font-bold' : 'text-stone-500'} text-sm font-medium transition-colors`}>{t.nav.catalog}</button>
@@ -129,7 +130,15 @@ const Navbar: React.FC<NavbarProps> = ({
                               <div className="mt-3 flex items-center justify-between gap-3">
                                 <div className="inline-flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
                                   <button aria-label={`Vähenda toote ${product?.title || ''} kogust`} onClick={() => onDecreaseQty(item.productId)} disabled={!canDecrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-minus text-[10px]"></i></button>
-                                  <span className="min-w-[20px] text-center text-sm font-black text-stone-900">{item.quantity}</span>
+                                  <input
+                                    aria-label={`Muuda toote ${product?.title || ''} kogust`}
+                                    type="number"
+                                    min={minQty}
+                                    max={maxQty === Number.MAX_SAFE_INTEGER ? undefined : maxQty}
+                                    value={item.quantity}
+                                    onChange={e => onSetQty(item.productId, Number(e.target.value))}
+                                    className="w-14 bg-transparent text-center text-sm font-black text-stone-900 outline-none"
+                                  />
                                   <button aria-label={`Suurenda toote ${product?.title || ''} kogust`} onClick={() => onIncreaseQty(item.productId)} disabled={!canIncrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-plus text-[10px]"></i></button>
                                 </div>
                                 <span className="text-sm font-black text-stone-900">{product ? calculateLineTotal(product, item.quantity).toFixed(2) : '0.00'}€</span>
@@ -190,7 +199,7 @@ const Navbar: React.FC<NavbarProps> = ({
             <button onClick={() => navigateTo('catalog')} className={`block w-full text-left px-4 py-3 rounded-xl font-bold ${currentView === 'catalog' ? 'bg-emerald-50 text-emerald-700' : 'text-stone-600'}`}>{t.nav.catalog}</button>
             {user && <button onClick={() => navigateTo('orders')} className={`block w-full text-left px-4 py-3 rounded-xl font-bold ${currentView === 'orders' ? 'bg-emerald-50 text-emerald-700' : 'text-stone-600'}`}>{t.nav.orders}</button>}
             {user?.role === UserRole.GARDENER && <button onClick={() => navigateTo('dashboard')} className={`block w-full text-left px-4 py-3 rounded-xl font-bold ${currentView === 'dashboard' ? 'bg-emerald-50 text-emerald-700' : 'text-stone-600'}`}>{t.nav.dashboard}</button>}
-            
+
             <div className="pt-6 border-t border-stone-100 mt-6 space-y-6">
               <div className="space-y-3 px-2">
                 <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Keel</p>
@@ -200,7 +209,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   ))}
                 </div>
               </div>
-              
+
               {!user ? (
                 <div className="space-y-2 px-2">
                   <button onClick={() => { setAuthModal('login'); setIsMenuOpen(false); }} className="w-full py-4 border border-stone-200 rounded-2xl font-bold text-sm text-stone-700 hover:bg-stone-50">{t.nav.login}</button>
