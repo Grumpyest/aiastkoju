@@ -135,25 +135,51 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     .reduce((acc, curr) => acc + (hasFinalPayout(curr) ? getSellerPayout(curr) : 0), 0);
   const pendingOrdersCount = myOrders.filter(o => o.status === OrderStatus.NEW).length;
   const inProgressOrdersCount = myOrders.filter(o => o.status === OrderStatus.CONFIRMED).length;
+  const connectDisabledReason = paymentProfile?.connect?.disabledReason || '';
+  const payoutNeedsAction = Boolean(paymentProfile?.connect?.accountId) && (
+    !paymentProfile?.connect?.detailsSubmitted ||
+    (
+      connectDisabledReason.startsWith('requirements.') &&
+      connectDisabledReason !== 'requirements.pending_verification'
+    )
+  );
   const payoutStatus = paymentProfile?.connect?.payoutsEnabled
     ? 'ready'
+    : payoutNeedsAction
+    ? 'action'
     : paymentProfile?.connect?.detailsSubmitted
     ? 'review'
     : 'missing';
   const payoutLabel = payoutStatus === 'ready'
     ? 'Valmis väljamakseteks'
+    : payoutStatus === 'action'
+    ? 'Vajab sinu isikutuvastust'
     : payoutStatus === 'review'
-    ? 'Stripe kontrollib kontot'
+    ? 'Kontot kontrollitakse'
     : 'Väljamakse konto puudub';
   const payoutDescription = payoutStatus === 'ready'
     ? 'Ostude raha saab liikuda sinu ühendatud väljamakse kontole.'
+    : payoutStatus === 'action'
+    ? "Stripe vajab sinu poolt lisakinnitust, näiteks passi, ID-kaardi või muu isikut tõendava dokumendiga. Vajuta \"Halda väljamakse kontot\" ja lõpeta Stripe'i juhised."
     : payoutStatus === 'review'
-    ? 'Stripe kontrollib sisestatud andmeid. Kui kontroll on valmis, aktiveeruvad väljamaksed.'
+    ? 'Kontot kontrollitakse. Kui kontroll on valmis, aktiveeruvad väljamaksed automaatselt.'
     : 'Ühenda Stripe väljamakse konto, et ostude raha sinuni jõuaks.';
   const payoutMethodLabel = paymentProfile?.payoutMethod?.last4
-    ? `${paymentProfile.payoutMethod.brand || 'Konto'} ****${paymentProfile.payoutMethod.last4}`
+    ? (paymentProfile.payoutMethod.brand || 'Konto') + ' ****' + paymentProfile.payoutMethod.last4
     : 'Kontot pole veel ühendatud';
 
+  const payoutActionLabel = paymentAction === 'connect'
+    ? 'Avame Stripe...'
+    : payoutStatus === 'action'
+    ? 'Tee isikutuvastus'
+    : paymentProfile?.connect?.accountId
+    ? 'Halda väljamakse kontot'
+    : 'Ühenda väljamakse konto';
+  const payoutIconClassName = payoutStatus === 'ready'
+    ? 'w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm bg-emerald-50 text-emerald-600'
+    : payoutStatus === 'action'
+    ? 'w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm bg-red-50 text-red-600'
+    : 'w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm bg-amber-50 text-amber-800';
   const refreshPaymentProfile = async (options: { refreshStripe?: boolean } = {}) => {
     const profile = await getPaymentProfile(options);
     setPaymentProfile(profile);
@@ -959,9 +985,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-stone-100 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm ${
-                  payoutStatus === 'ready' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-800'
-                }`}>
+                <div className={payoutIconClassName}>
                   <i className="fa-solid fa-building-columns text-xl"></i>
                 </div>
                 <div>
@@ -981,11 +1005,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 disabled={paymentAction === 'connect' || paymentAction === 'disconnect'}
                 className="w-full lg:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-4 rounded-2xl font-black shadow-lg shadow-emerald-600/15 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {paymentAction === 'connect'
-                  ? 'Avame Stripe...'
-                  : paymentProfile?.connect?.accountId
-                  ? 'Halda väljamakse kontot'
-                  : 'Ühenda väljamakse konto'}
+                {payoutActionLabel}
               </button>
               {paymentProfile?.connect?.accountId && (
                 <button
@@ -1009,6 +1029,11 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                     const height = maxChartRevenue > 0
                       ? Math.max(12, Math.round((item.revenue / maxChartRevenue) * 100))
                       : 0;
+                    const barClassName = index % 2 === 0
+                      ? 'w-10 rounded-xl bg-emerald-500'
+                      : 'w-10 rounded-xl bg-emerald-700';
+                    const barHeight = String(height) + '%';
+                    const barTitle = item.fullName + ': ' + item.revenue.toFixed(2) + '€';
 
                     return (
                       <div key={item.fullName} className="flex h-full min-w-16 flex-1 flex-col items-center justify-end gap-3">
@@ -1016,9 +1041,9 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                           {item.revenue.toFixed(2)}€
                         </div>
                         <div
-                          className={`w-10 rounded-xl ${index % 2 === 0 ? 'bg-emerald-500' : 'bg-emerald-700'}`}
-                          style={{ height: `${height}%` }}
-                          title={`${item.fullName}: ${item.revenue.toFixed(2)}€`}
+                          className={barClassName}
+                          style={{ height: barHeight }}
+                          title={barTitle}
                         />
                         <div className="max-w-20 truncate text-center text-[10px] font-bold text-stone-500">
                           {item.name}
@@ -1222,7 +1247,13 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                       <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{product?.title}</p>
                     </div>
                     <div className="flex text-yellow-400 text-[10px] gap-0.5">
-                      {[1, 2, 3, 4, 5].map(s => <i key={s} className={`fa-solid fa-star ${s <= review.rating ? 'text-yellow-400' : 'text-stone-100'}`}></i>)}
+                      {[1, 2, 3, 4, 5].map(s => {
+                        const starClassName = s <= review.rating
+                          ? 'fa-solid fa-star text-yellow-400'
+                          : 'fa-solid fa-star text-stone-100';
+
+                        return <i key={s} className={starClassName}></i>;
+                      })}
                     </div>
                   </div>
                   <p className="text-stone-600 text-sm font-medium italic mt-4">"{review.comment}"</p>
@@ -1442,13 +1473,13 @@ const handleSaveEdit = async (e: React.FormEvent) => {
         </div>
       )}
 
-      <style>{`
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
-        .scrollbar-thumb-stone-100::-webkit-scrollbar-thumb { background: #f5f5f4; border-radius: 10px; }
-      `}</style>
+      <style>{[
+        '.animate-fade-in { animation: fadeIn 0.3s ease-out; }',
+        '@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }',
+        '.no-scrollbar::-webkit-scrollbar { display: none; }',
+        '.scrollbar-thin::-webkit-scrollbar { width: 4px; }',
+        '.scrollbar-thumb-stone-100::-webkit-scrollbar-thumb { background: #f5f5f4; border-radius: 10px; }',
+      ].join('\n')}</style>
     </div>
   );
 };
