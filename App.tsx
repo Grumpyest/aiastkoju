@@ -3,6 +3,7 @@ import { User, UserRole, Language, Product, CartItem, Order, OrderStatus, Review
 import { TRANSLATIONS, CATEGORIES } from './constants';
 import Navbar from './components/Navbar';
 import HomeView from './views/HomeView';
+import CookieConsent, { COOKIE_CONSENT_OPEN_EVENT } from './components/CookieConsent';
 
 const LOCATION_FILTER_STORAGE_KEY = 'marketplace-location-filter-v1';
 const CatalogView = lazy(() => import('./views/CatalogView'));
@@ -152,7 +153,7 @@ const App: React.FC = () => {
     }
   });
 
-  const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy'>('none');
+  const [legalModal, setLegalModal] = useState<'none' | 'about' | 'terms' | 'privacy' | 'cookies'>('none');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const areReviewRepliesLoadedRef = useRef(false);
   const [productScope, setProductScope] = useState<'idle' | 'home' | 'full'>('idle');
@@ -955,6 +956,7 @@ const App: React.FC = () => {
               <li><button onClick={() => setLegalModal('about')} className="hover:text-emerald-400 transition-colors">Meist</button></li>
               <li><button onClick={() => setLegalModal('terms')} className="hover:text-emerald-400 transition-colors">Kasutustingimused</button></li>
               <li><button onClick={() => setLegalModal('privacy')} className="hover:text-emerald-400 transition-colors">Privaatsuspoliitika</button></li>
+              <li><button onClick={() => setLegalModal('cookies')} className="hover:text-emerald-400 transition-colors">Küpsiste poliitika</button></li>
             </ul>
           </div>
           <div>
@@ -979,7 +981,7 @@ const App: React.FC = () => {
       </footer>
 
       {legalModal !== 'none' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl max-h-[80vh] overflow-y-auto relative">
             <button aria-label="Sulge infoaken" onClick={() => setLegalModal('none')} className="absolute top-6 right-6 text-stone-400 hover:text-stone-900"><i className="fa-solid fa-xmark text-xl"></i></button>
             {legalModal === 'about' && (
@@ -1006,9 +1008,29 @@ const App: React.FC = () => {
                 <p>Me ei jaga teie andmeid kolmandatele osapooltele turunduslikel eesmärkidel.</p>
               </div>
             )}
+            {legalModal === 'cookies' && (
+              <div className="space-y-4 text-stone-700 leading-relaxed">
+                <h2 className="text-2xl font-bold mb-4">Küpsiste poliitika</h2>
+                <p>Kasutame hädavajalikke küpsiseid ja brauseri kohalikku salvestust, et ostukorv, sisselogimine, maksed, keeleseaded ja turvafunktsioonid töötaksid korrektselt.</p>
+                <p>Valikulised küpsised jagunevad funktsionaalseteks, analüütika ja turunduse küpsisteks. Neid kasutatakse ainult sinu nõusolekul ning neid saab esmasel külastusel osaliselt lubada, kõik lubada või kõigist valikulistest küpsistest keelduda.</p>
+                <p>Kui valid “Keeldu kõigist”, jäävad tööle ainult teenuse toimimiseks vajalikud küpsised. Makseid töötleb Stripe ning sellega seotud küpsiseid kasutatakse maksete turvaliseks teostamiseks.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLegalModal('none');
+                    window.dispatchEvent(new Event(COOKIE_CONSENT_OPEN_EVENT));
+                  }}
+                  className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700"
+                >
+                  Muuda küpsiste valikut
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
+
+      <CookieConsent />
 
       <style>{`
         @keyframes bounce-in {
