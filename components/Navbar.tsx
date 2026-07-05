@@ -23,10 +23,11 @@ interface NavbarProps {
   authModal: 'none' | 'login' | 'register';
   setAuthModal: (val: 'none' | 'login' | 'register') => void;
   onNotify?: (message: string, type: 'success' | 'error') => void;
+  onOpenLegal?: (type: 'terms' | 'privacy' | 'cookies') => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({
-  currentView, setCurrentView, user, setUser, cart, onIncreaseQty, onDecreaseQty, onSetQty, onRemoveFromCart, onCheckout, language, setLanguage, t, products, authModal, setAuthModal, onNotify
+  currentView, setCurrentView, user, setUser, cart, onIncreaseQty, onDecreaseQty, onSetQty, onRemoveFromCart, onCheckout, language, setLanguage, t, products, authModal, setAuthModal, onNotify, onOpenLegal
 }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -235,6 +236,7 @@ const Navbar: React.FC<NavbarProps> = ({
             setMode={setAuthModal}
             setUser={setUser}
             onNotify={onNotify}
+            onOpenLegal={onOpenLegal}
           />
         </Suspense>
       )}

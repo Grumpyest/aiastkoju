@@ -918,6 +918,7 @@ const App: React.FC = () => {
         authModal={isAuthModalOpen}
         setAuthModal={setIsAuthModalOpen}
         onNotify={showToast}
+        onOpenLegal={setLegalModal}
       />
 
       <main className="grow">
@@ -995,6 +996,10 @@ const App: React.FC = () => {
               <div className="space-y-4 text-stone-700 leading-relaxed">
                 <h2 className="text-2xl font-bold mb-4">Kasutustingimused</h2>
                 <p className="font-bold text-red-600">Oluline teada:</p>
+                <p>Konto loomisega kinnitad, et nõustud Aiast Koju kasutustingimustega ning kasutad platvormi ausalt, seaduslikult ja ainult lubatud kaupade pakkumiseks või ostmiseks.</p>
+                <p>Aiast Koju vahendab ostja ja müüja vahelist tehingut. Müüja vastutab oma kuulutuse, hinna, koguse, kauba kvaliteedi, üleandmise ja seaduslikkuse eest.</p>
+                <p>Makseid ja müüjate väljamakseid vahendab Stripe. Platvorm võib võtta tellimuselt teenustasu ning Stripe võib kohaldada oma makse- ja vaidlustusreegleid.</p>
+                <p>Aednikuna registreerudes kinnitad lisaks, et vastutad oma müüdava kauba, klientide päringutele vastamise ning võimalike tagasimaksete ja vaidluste lahendamise eest.</p>
                 <p>1. Aiast Koju on kuulutuste platvorm ja infovahetuskeskkond. Meie ei ole kaupade müüja ega tootja.</p>
                 <p>2. Platvorm ei vastuta pakutava kauba kvaliteedi, koguse ega kirjelduse vastavuse eest. Kogu vastutus lasub kauba pakkujal (Müüjal).</p>
                 <p>3. Makseid vahendab Stripe. Aiast Koju võib võtta tellimuselt teenustasu ning müüjale kantakse ülejäänud summa Stripe Connecti kaudu.</p>
@@ -1004,6 +1009,10 @@ const App: React.FC = () => {
             {legalModal === 'privacy' && (
               <div className="space-y-4 text-stone-700 leading-relaxed">
                 <h2 className="text-2xl font-bold mb-4">Privaatsuspoliitika</h2>
+                <p>Konto loomisel töötleme andmeid, mis on vajalikud kasutaja tuvastamiseks, tellimuste haldamiseks, müüjaga suhtlemiseks, turvalisuse tagamiseks ja maksete toimimiseks.</p>
+                <p>Selliste andmete hulka võivad kuuluda nimi, e-post, telefon, asukoht, roll platvormil, tellimuste info ja aedniku puhul Stripe Connecti väljamaksete seadistamise olek.</p>
+                <p>Makseid töötleb Stripe. Aiast Koju ei salvesta sinu kaardi täisandmeid oma süsteemis.</p>
+                <p>Andmeid jagatakse teenuse toimimiseks üksnes vajalikus ulatuses, näiteks Stripe'i, Supabase'i või tellimuse teise osapoolega. Me ei müü isikuandmeid turunduslikel eesmärkidel.</p>
                 <p>Teie andmete turvalisus on meile oluline. Kogume vaid hädavajalikku infot (nimi, e-post), et tagada platvormi toimimine.</p>
                 <p>Me ei jaga teie andmeid kolmandatele osapooltele turunduslikel eesmärkidel.</p>
               </div>

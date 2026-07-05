@@ -9,9 +9,10 @@ interface AuthModalProps {
   setMode: (mode: 'none' | 'login' | 'register') => void;
   setUser: (user: User | null) => void;
   onNotify?: (message: string, type: 'success' | 'error') => void;
+  onOpenLegal?: (type: 'terms' | 'privacy' | 'cookies') => void;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify, onOpenLegal }) => {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [regData, setRegData] = useState({
     name: '',
@@ -21,6 +22,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify 
     phone: '',
     location: '',
     role: UserRole.BUYER,
+    legalAccepted: false,
     termsAccepted: false,
   });
 
@@ -99,6 +101,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify 
       return;
     }
 
+    if (!regData.legalAccepted) {
+      onNotify?.('Konto loomiseks pead nõustuma kasutustingimuste ja privaatsuspoliitikaga.', 'error');
+      return;
+    }
+
     if (regData.role === UserRole.GARDENER) {
       if (!regData.termsAccepted) {
         onNotify?.('Aednikuna liitumiseks pead nõustuma tingimustega!', 'error');
@@ -110,6 +117,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify 
       }
     }
 
+    const acceptedAt = new Date().toISOString();
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail(regData.email),
       password: regData.password,
@@ -120,6 +128,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify 
           phone: cleanPhone(regData.phone),
           location: cleanText(regData.location, 240),
           is_seller: regData.role === UserRole.GARDENER,
+          legal_terms_accepted_at: acceptedAt,
+          legal_privacy_accepted_at: acceptedAt,
+          legal_cookies_acknowledged_at: acceptedAt,
+          seller_terms_accepted_at: regData.role === UserRole.GARDENER ? acceptedAt : null,
         },
       },
     });
@@ -235,6 +247,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify 
                 <input required type="password" placeholder="Parool" value={regData.password} onChange={e => setRegData({ ...regData, password: e.target.value })} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
                 <input required type="password" placeholder="Kinnita parool" value={regData.confirmPassword} onChange={e => setRegData({ ...regData, confirmPassword: e.target.value })} className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500" />
               </div>
+              <label className="flex items-start gap-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 cursor-pointer">
+                <input
+                  type="checkbox"
+                  required
+                  checked={regData.legalAccepted}
+                  onChange={e => setRegData({ ...regData, legalAccepted: e.target.checked })}
+                  className="mt-0.5 w-5 h-5 accent-emerald-600"
+                />
+                <span className="text-xs text-emerald-900 leading-relaxed">
+                  Nõustun Aiast Koju{' '}
+                  <button type="button" onClick={() => onOpenLegal?.('terms')} className="font-bold underline underline-offset-2">kasutustingimustega</button>
+                  ,{' '}
+                  <button type="button" onClick={() => onOpenLegal?.('privacy')} className="font-bold underline underline-offset-2">privaatsuspoliitikaga</button>
+                  {' '}ja kinnitan, et olen tutvunud{' '}
+                  <button type="button" onClick={() => onOpenLegal?.('cookies')} className="font-bold underline underline-offset-2">küpsiste poliitikaga</button>.
+                </span>
+              </label>
               {regData.role === UserRole.GARDENER && (
                 <label className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100 cursor-pointer">
                   <input type="checkbox" required checked={regData.termsAccepted} onChange={e => setRegData({ ...regData, termsAccepted: e.target.checked })} className="w-5 h-5 accent-emerald-600" />
