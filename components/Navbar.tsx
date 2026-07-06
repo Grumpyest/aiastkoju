@@ -110,14 +110,15 @@ const Navbar: React.FC<NavbarProps> = ({
                       <h3 className="font-bold text-stone-900 text-xs uppercase tracking-widest">Ostukorv</h3>
                       <button aria-label="Sulge ostukorv" onClick={() => setIsCartOpen(false)} className="text-stone-400 hover:text-stone-600"><i className="fa-solid fa-xmark"></i></button>
                     </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 md:max-h-80 md:flex-none">
+                    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 md:max-h-80 md:flex-none">
                       {cart.length === 0 ? <p className="text-center text-stone-500 py-8 italic text-sm">Ostukorv on tühi</p> : cart.map(item => {
                         const product = products.find(p => p.id === item.productId);
                         const minQty = Math.max(1, Number(product?.minOrderQty ?? 1));
                         const maxQty = Number(product?.stockQty ?? 0) > 0 ? Number(product?.stockQty ?? 0) : Number.MAX_SAFE_INTEGER;
                         return (
-                          <div key={item.productId} className="flex gap-3 rounded-2xl border border-stone-100 p-3">
-                            <img src={product?.image} alt="" loading="lazy" decoding="async" className="w-14 h-14 rounded-xl object-cover bg-stone-100" />
+                          <div key={item.productId} className="rounded-2xl border border-stone-100 p-3">
+                            <div className="flex gap-3">
+                            <img src={product?.image} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover bg-stone-100 shrink-0" />
                             <div className="flex-grow min-w-0">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -126,7 +127,9 @@ const Navbar: React.FC<NavbarProps> = ({
                                 </div>
                                 <button aria-label={`Eemalda ${product?.title || 'toode'} ostukorvist`} onClick={() => onRemoveFromCart(item.productId)} className="text-xs text-red-500 font-bold whitespace-nowrap">Eemalda</button>
                               </div>
-                              <div className="mt-3 flex items-center justify-between gap-3">
+                            </div>
+                            </div>
+                              <div className="mt-3 grid grid-cols-1 gap-2">
                                 <QuantityPicker
                                   label={product?.title || ''}
                                   quantity={item.quantity}
@@ -135,10 +138,15 @@ const Navbar: React.FC<NavbarProps> = ({
                                   maxQty={maxQty}
                                   onSetQty={quantity => onSetQty(item.productId, quantity)}
                                   size="sm"
+                                  compact
                                 />
-                                <span className="text-sm font-black text-stone-900">{product ? calculateLineTotal(product, item.quantity).toFixed(2) : '0.00'}€</span>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                                    Kokku
+                                  </span>
+                                  <span className="text-sm font-black text-stone-900">{product ? calculateLineTotal(product, item.quantity).toFixed(2) : '0.00'}€</span>
+                                </div>
                               </div>
-                            </div>
                           </div>
                         );
                       })}

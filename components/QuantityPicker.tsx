@@ -9,6 +9,7 @@ interface QuantityPickerProps {
   onSetQty: (quantity: number) => void;
   size?: 'sm' | 'md' | 'lg';
   showMinHint?: boolean;
+  compact?: boolean;
 }
 
 const normalizeUnit = (unit?: string | null) => String(unit || 'tk').trim().toLowerCase() || 'tk';
@@ -64,8 +65,8 @@ const getSizeClasses = (size: QuantityPickerProps['size']) => {
 
   return {
     button: 'w-6 h-6 rounded-lg',
-    input: 'w-16 text-sm',
-    shell: 'gap-2 px-2 py-1.5 rounded-xl',
+    input: 'w-12 text-sm',
+    shell: 'gap-1.5 px-1.5 py-1.5 rounded-xl',
   };
 };
 
@@ -78,6 +79,7 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
   onSetQty,
   size = 'sm',
   showMinHint = true,
+  compact = false,
 }) => {
   const baseUnit = normalizeUnit(unit);
   const unitOptions = useMemo(() => (baseUnit === 'g' ? ['g', 'kg'] : [baseUnit]), [baseUnit]);
@@ -130,7 +132,7 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className={`inline-flex w-fit items-center border bg-stone-50 ${sizeClasses.shell} ${isBelowMin || isAboveMax ? 'border-amber-300 ring-2 ring-amber-100' : 'border-stone-200'}`}>
+      <div className={`inline-flex max-w-full items-center border bg-stone-50 ${compact ? 'w-full justify-between' : 'w-fit'} ${sizeClasses.shell} ${isBelowMin || isAboveMax ? 'border-amber-300 ring-2 ring-amber-100' : 'border-stone-200'}`}>
         <button
           type="button"
           aria-label={`Vahenda toote ${label} kogust`}
@@ -158,16 +160,23 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
           className={`${sizeClasses.input} bg-transparent text-center font-black text-stone-900 outline-none`}
         />
         {unitOptions.length > 1 ? (
-          <select
-            aria-label={`Vali toote ${label} uhik`}
-            value={displayUnit}
-            onChange={e => handleUnitChange(e.target.value)}
-            className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs font-black uppercase text-emerald-800 outline-none"
-          >
+          <div className="inline-flex shrink-0 rounded-lg border border-stone-200 bg-white p-0.5">
             {unitOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
+              <button
+                key={option}
+                type="button"
+                aria-label={`Vali ${option}`}
+                onClick={() => handleUnitChange(option)}
+                className={`rounded-md px-2 py-1 text-[10px] font-black uppercase transition-colors ${
+                  displayUnit === option
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-stone-500 hover:text-emerald-700'
+                }`}
+              >
+                {option}
+              </button>
             ))}
-          </select>
+          </div>
         ) : (
           <span className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs font-black uppercase text-emerald-800">
             {baseUnit}
