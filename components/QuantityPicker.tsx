@@ -52,6 +52,7 @@ const getSizeClasses = (size: QuantityPickerProps['size']) => {
       button: 'w-10 h-10 rounded-xl',
       input: 'w-24 text-xl',
       shell: 'gap-2 p-2 rounded-2xl',
+      unitToggle: 'px-3 py-2 text-xs',
     };
   }
 
@@ -60,6 +61,7 @@ const getSizeClasses = (size: QuantityPickerProps['size']) => {
       button: 'w-7 h-7 rounded-lg',
       input: 'w-20 text-sm',
       shell: 'gap-2 px-2 py-1.5 rounded-xl',
+      unitToggle: 'px-2.5 py-1.5 text-[10px]',
     };
   }
 
@@ -67,6 +69,7 @@ const getSizeClasses = (size: QuantityPickerProps['size']) => {
     button: 'w-6 h-6 rounded-lg',
     input: 'w-12 text-sm',
     shell: 'gap-1.5 px-1.5 py-1.5 rounded-xl',
+    unitToggle: 'px-2 py-1 text-[10px]',
   };
 };
 
@@ -129,68 +132,71 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
     setWasAdjusted(false);
     setDraftValue(formatNumber(toDisplayQuantity(quantity, nextUnit, baseUnit)));
   };
+  const unitControl = unitOptions.length > 1 ? (
+    <div className="inline-flex shrink-0 rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
+      {unitOptions.map(option => (
+        <button
+          key={option}
+          type="button"
+          aria-label={`Vali ${option}`}
+          onClick={() => handleUnitChange(option)}
+          className={`rounded-lg font-black uppercase transition-colors ${sizeClasses.unitToggle} ${
+            displayUnit === option
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-stone-500 hover:text-emerald-700'
+          }`}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  ) : (
+    <span className="shrink-0 rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-black uppercase text-emerald-800 shadow-sm">
+      {baseUnit}
+    </span>
+  );
 
   return (
     <div className="space-y-2">
-      <div className={`inline-flex max-w-full items-center border bg-stone-50 ${compact ? 'w-full justify-between' : 'w-fit'} ${sizeClasses.shell} ${isBelowMin || isAboveMax ? 'border-amber-300 ring-2 ring-amber-100' : 'border-stone-200'}`}>
-        <button
-          type="button"
-          aria-label={`Vahenda toote ${label} kogust`}
-          onClick={() => adjustBy(-1)}
-          disabled={!canDecrease}
-          className={`${sizeClasses.button} bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed`}
-        >
-          <i className="fa-solid fa-minus text-[10px]"></i>
-        </button>
-        <input
-          aria-label={`Muuda toote ${label} kogust`}
-          type="text"
-          inputMode="decimal"
-          value={draftValue}
-          onChange={e => {
-            setWasAdjusted(false);
-            setDraftValue(e.target.value);
-          }}
-          onBlur={() => commitValue(draftValue)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.currentTarget.blur();
-            }
-          }}
-          className={`${sizeClasses.input} bg-transparent text-center font-black text-stone-900 outline-none`}
-        />
-        {unitOptions.length > 1 ? (
-          <div className="inline-flex shrink-0 rounded-lg border border-stone-200 bg-white p-0.5">
-            {unitOptions.map(option => (
-              <button
-                key={option}
-                type="button"
-                aria-label={`Vali ${option}`}
-                onClick={() => handleUnitChange(option)}
-                className={`rounded-md px-2 py-1 text-[10px] font-black uppercase transition-colors ${
-                  displayUnit === option
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-stone-500 hover:text-emerald-700'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <span className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs font-black uppercase text-emerald-800">
-            {baseUnit}
-          </span>
-        )}
-        <button
-          type="button"
-          aria-label={`Suurenda toote ${label} kogust`}
-          onClick={() => adjustBy(1)}
-          disabled={!canIncrease}
-          className={`${sizeClasses.button} bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed`}
-        >
-          <i className="fa-solid fa-plus text-[10px]"></i>
-        </button>
+      <div className={`flex max-w-full items-center gap-2 ${compact ? 'w-full' : 'w-fit'}`}>
+        <div className={`inline-flex min-w-0 flex-1 items-center justify-between border bg-stone-50 ${sizeClasses.shell} ${isBelowMin || isAboveMax ? 'border-amber-300 ring-2 ring-amber-100' : 'border-stone-200'}`}>
+          <button
+            type="button"
+            aria-label={`Vahenda toote ${label} kogust`}
+            onClick={() => adjustBy(-1)}
+            disabled={!canDecrease}
+            className={`${sizeClasses.button} bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            <i className="fa-solid fa-minus text-[10px]"></i>
+          </button>
+          <input
+            aria-label={`Muuda toote ${label} kogust`}
+            type="text"
+            inputMode="decimal"
+            value={draftValue}
+            onChange={e => {
+              setWasAdjusted(false);
+              setDraftValue(e.target.value);
+            }}
+            onBlur={() => commitValue(draftValue)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur();
+              }
+            }}
+            className={`${sizeClasses.input} bg-transparent text-center font-black text-stone-900 outline-none`}
+          />
+          <button
+            type="button"
+            aria-label={`Suurenda toote ${label} kogust`}
+            onClick={() => adjustBy(1)}
+            disabled={!canIncrease}
+            className={`${sizeClasses.button} bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            <i className="fa-solid fa-plus text-[10px]"></i>
+          </button>
+        </div>
+        {unitControl}
       </div>
       {showMinHint && (
         <div className="flex flex-wrap items-center gap-2">
