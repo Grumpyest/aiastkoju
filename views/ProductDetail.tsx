@@ -5,6 +5,7 @@ import StarRating from '../components/StarRating';
 import { cleanText, MAX_LONG_TEXT_LENGTH } from '../utils/security';
 import { getPriceBasisLabel } from '../utils/pricing';
 import { createReviewReplySecurely } from '../utils/secureActions';
+import QuantityPicker from '../components/QuantityPicker';
 
 interface ProductDetailProps {
   product: Product;
@@ -21,10 +22,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, user, reviews, s
   const minimumOrderQty = Math.max(1, Number(product.minOrderQty ?? 1));
   const maximumOrderQty = Number(product.stockQty ?? 0) > 0 ? Number(product.stockQty ?? 0) : Number.MAX_SAFE_INTEGER;
   const [quantity, setQuantity] = useState<number>(minimumOrderQty);
-  const setSafeQuantity = (value: number) => {
-    const nextQty = Math.min(maximumOrderQty, Math.max(minimumOrderQty, Math.round(Number(value || minimumOrderQty))));
-    setQuantity(nextQty);
-  };
   
 const PLACEHOLDER = "/placeholder.png";
 
@@ -154,21 +151,17 @@ useEffect(() => {
     <p className="text-stone-600 leading-relaxed text-lg mb-10">{product.description ?? ''}</p>
 
     <div className="bg-white rounded-3xl p-8 border border-stone-100 shadow-xl shadow-stone-200/50">
-      <div className="flex items-center justify-between mb-8">
-        <span className="text-stone-900 font-black text-lg">Kogus ({product.unit ?? ''})</span>
-        <div className="flex items-center gap-6 bg-stone-50 p-2 rounded-2xl border border-stone-100">
-          <button aria-label="Vähenda kogust" onClick={() => setSafeQuantity(quantity - 1)} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-minus"></i></button>
-          <input
-            aria-label="Muuda kogust"
-            type="number"
-            min={minimumOrderQty}
-            max={maximumOrderQty === Number.MAX_SAFE_INTEGER ? undefined : maximumOrderQty}
-            value={quantity}
-            onChange={e => setSafeQuantity(Number(e.target.value))}
-            className="w-20 bg-transparent text-center text-xl font-black outline-none"
-          />
-          <button aria-label="Suurenda kogust" onClick={() => setSafeQuantity(quantity + 1)} className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-90"><i className="fa-solid fa-plus"></i></button>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-8">
+        <span className="text-stone-900 font-black text-lg">Kogus</span>
+        <QuantityPicker
+          label={product.title}
+          quantity={quantity}
+          unit={product.unit}
+          minQty={minimumOrderQty}
+          maxQty={maximumOrderQty}
+          onSetQty={setQuantity}
+          size="lg"
+        />
       </div>
 
       <div className="flex gap-4">

@@ -4,6 +4,7 @@ import { buildExternalMapUrl, calculateDistanceKm, formatDistanceKm, geocodeLoca
 import LocationAutocompleteInput from '../components/LocationAutocompleteInput';
 import { redirectToPaymentFunction } from '../utils/payments';
 import { calculateLineTotal, getPriceBasisLabel } from '../utils/pricing';
+import QuantityPicker from '../components/QuantityPicker';
 
 interface CheckoutViewProps {
   user: User | null;
@@ -330,9 +331,6 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                       {sellerItems.map(item => {
                         const minQty = Math.max(1, Number(item.minOrderQty ?? 1));
                         const maxQty = Number(item.stockQty ?? 0) > 0 ? Number(item.stockQty ?? 0) : Number.MAX_SAFE_INTEGER;
-                        const canDecrease = item.quantity > minQty;
-                        const canIncrease = item.quantity < maxQty;
-
                         return (
                           <div key={item.productId} className="rounded-2xl border border-stone-100 bg-white p-3">
                             <div className="flex items-start gap-3">
@@ -355,38 +353,17 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                                 </div>
 
                                 <div className="mt-3 space-y-3">
-                                  <div className="inline-flex w-fit items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => onDecreaseQty(item.productId)}
-                                      disabled={!canDecrease}
-                                      className="w-7 h-7 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      <i className="fa-solid fa-minus text-[10px]"></i>
-                                    </button>
-                                    <input
-                                      aria-label={`Muuda toote ${item.title} kogust`}
-                                      type="number"
-                                      min={minQty}
-                                      max={maxQty === Number.MAX_SAFE_INTEGER ? undefined : maxQty}
-                                      value={item.quantity}
-                                      onChange={e => onSetQty(item.productId, Number(e.target.value))}
-                                      className="w-16 bg-transparent text-center text-sm font-black text-stone-900 outline-none"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => onIncreaseQty(item.productId)}
-                                      disabled={!canIncrease}
-                                      className="w-7 h-7 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      <i className="fa-solid fa-plus text-[10px]"></i>
-                                    </button>
-                                  </div>
+                                  <QuantityPicker
+                                    label={item.title}
+                                    quantity={item.quantity}
+                                    unit={item.unit}
+                                    minQty={minQty}
+                                    maxQty={maxQty}
+                                    onSetQty={quantity => onSetQty(item.productId, quantity)}
+                                    size="md"
+                                  />
 
-                                  <div className="flex items-end justify-between gap-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                                      Minimaalne tellimus: {minQty} {item.unit}
-                                    </p>
+                                  <div className="flex items-end justify-end gap-3">
                                     <span className="shrink-0 text-base font-black text-stone-900">
                                       {calculateLineTotal(item, item.quantity).toFixed(2)}€
                                     </span>

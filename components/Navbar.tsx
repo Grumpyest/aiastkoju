@@ -2,6 +2,7 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { User, UserRole, Language, CartItem, Product } from '../types';
 import { calculateLineTotal, getPriceBasisLabel } from '../utils/pricing';
+import QuantityPicker from './QuantityPicker';
 
 const AuthModal = lazy(() => import('./AuthModal'));
 
@@ -114,9 +115,6 @@ const Navbar: React.FC<NavbarProps> = ({
                         const product = products.find(p => p.id === item.productId);
                         const minQty = Math.max(1, Number(product?.minOrderQty ?? 1));
                         const maxQty = Number(product?.stockQty ?? 0) > 0 ? Number(product?.stockQty ?? 0) : Number.MAX_SAFE_INTEGER;
-                        const canDecrease = item.quantity > minQty;
-                        const canIncrease = item.quantity < maxQty;
-
                         return (
                           <div key={item.productId} className="flex gap-3 rounded-2xl border border-stone-100 p-3">
                             <img src={product?.image} alt="" loading="lazy" decoding="async" className="w-14 h-14 rounded-xl object-cover bg-stone-100" />
@@ -129,19 +127,15 @@ const Navbar: React.FC<NavbarProps> = ({
                                 <button aria-label={`Eemalda ${product?.title || 'toode'} ostukorvist`} onClick={() => onRemoveFromCart(item.productId)} className="text-xs text-red-500 font-bold whitespace-nowrap">Eemalda</button>
                               </div>
                               <div className="mt-3 flex items-center justify-between gap-3">
-                                <div className="inline-flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5">
-                                  <button aria-label={`Vähenda toote ${product?.title || ''} kogust`} onClick={() => onDecreaseQty(item.productId)} disabled={!canDecrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-minus text-[10px]"></i></button>
-                                  <input
-                                    aria-label={`Muuda toote ${product?.title || ''} kogust`}
-                                    type="number"
-                                    min={minQty}
-                                    max={maxQty === Number.MAX_SAFE_INTEGER ? undefined : maxQty}
-                                    value={item.quantity}
-                                    onChange={e => onSetQty(item.productId, Number(e.target.value))}
-                                    className="w-14 bg-transparent text-center text-sm font-black text-stone-900 outline-none"
-                                  />
-                                  <button aria-label={`Suurenda toote ${product?.title || ''} kogust`} onClick={() => onIncreaseQty(item.productId)} disabled={!canIncrease} className="w-6 h-6 rounded-lg bg-white text-stone-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i className="fa-solid fa-plus text-[10px]"></i></button>
-                                </div>
+                                <QuantityPicker
+                                  label={product?.title || ''}
+                                  quantity={item.quantity}
+                                  unit={product?.unit}
+                                  minQty={minQty}
+                                  maxQty={maxQty}
+                                  onSetQty={quantity => onSetQty(item.productId, quantity)}
+                                  size="sm"
+                                />
                                 <span className="text-sm font-black text-stone-900">{product ? calculateLineTotal(product, item.quantity).toFixed(2) : '0.00'}€</span>
                               </div>
                             </div>
