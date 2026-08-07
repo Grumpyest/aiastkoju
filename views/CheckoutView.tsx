@@ -483,6 +483,9 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                   <p className="opacity-80">
                     Makse toimub turvaliselt. Ostja maksab ainult toodete summa. Teenustasud arvestatakse müüja väljamaksest.
                   </p>
+                  <p className="opacity-80 mt-2">
+                    Aiast Koju vahendab tellimust. Toote info, kvaliteedi ja üleandmise eest vastutab konkreetne müüja.
+                  </p>
                   {sellerOrderCount > 1 && (
                     <p className="opacity-80 mt-2">
                       Ostukorvis on {sellerOrderCount} müüjat, seega jagatakse tellimus müüjate kaupa.

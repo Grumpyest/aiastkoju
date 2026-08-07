@@ -995,15 +995,13 @@ const App: React.FC = () => {
             {legalModal === 'terms' && (
               <div className="space-y-4 text-stone-700 leading-relaxed">
                 <h2 className="text-2xl font-bold mb-4">Kasutustingimused</h2>
-                <p className="font-bold text-red-600">Oluline teada:</p>
-                <p>Konto loomisega kinnitad, et nõustud Aiast Koju kasutustingimustega ning kasutad platvormi ausalt, seaduslikult ja ainult lubatud kaupade pakkumiseks või ostmiseks.</p>
-                <p>Aiast Koju vahendab ostja ja müüja vahelist tehingut. Müüja vastutab oma kuulutuse, hinna, koguse, kauba kvaliteedi, üleandmise ja seaduslikkuse eest.</p>
-                <p>Makseid ja müüjate väljamakseid vahendab Stripe. Platvorm võib võtta tellimuselt teenustasu ning Stripe võib kohaldada oma makse- ja vaidlustusreegleid.</p>
-                <p>Aednikuna registreerudes kinnitad lisaks, et vastutad oma müüdava kauba, klientide päringutele vastamise ning võimalike tagasimaksete ja vaidluste lahendamise eest.</p>
-                <p>1. Aiast Koju on kuulutuste platvorm ja infovahetuskeskkond. Meie ei ole kaupade müüja ega tootja.</p>
-                <p>2. Platvorm ei vastuta pakutava kauba kvaliteedi, koguse ega kirjelduse vastavuse eest. Kogu vastutus lasub kauba pakkujal (Müüjal).</p>
-                <p>3. Makseid vahendab Stripe. Aiast Koju võib võtta tellimuselt teenustasu ning müüjale kantakse ülejäänud summa Stripe Connecti kaudu.</p>
-                <p>4. Platvorm jätab endale õiguse eemaldada kuulutusi või kasutajaid, kes rikuvad häid tavasid.</p>
+                <p className="font-bold text-stone-900">Aiast Koju on vahenduskeskkond. Kauba müüja on konkreetne aednik või tootja, mitte Aiast Koju.</p>
+                <p>Algfaasis võib platvormil pakkuda ainult enda kasvatatud või korjatud taimseid esmatooteid: köögiviljad, marjad, puuviljad, maitsetaimed, seemned, istikud ja muud töötlemata aiasaadused.</p>
+                <p>Hoidised, mahlad, tükeldatud või muul viisil töödeldud toit, mesi ja loomsed tooted ei ole algfaasis lubatud, välja arvatud juhul, kui müüja on enne täitnud kõik vastavad toidu käitlemise, teavitamise ja märgistamise nõuded.</p>
+                <p>Aednik kinnitab konto loomisel või aedniku staatuse aktiveerimisel, et tema müük jääb väikeses koguses esmatoodete piiridesse või ta on Põllumajandus- ja Toiduameti nõuded täitnud.</p>
+                <p>Müüja vastutab oma kuulutuse, hinna, koguse, toote ohutuse, info õigsuse, üleandmise, tagasimaksete ja seaduslikkuse eest.</p>
+                <p>Ostjale kuvatakse tellimuse juures müüja andmed. Kui müüja tegutseb eraisikuna, võivad tarbijale seadusest tulenevad õigused erineda ettevõtjalt ostmisest.</p>
+                <p>Makseid vahendab makseteenuse pakkuja. Aiast Koju võib võtta tellimuselt teenustasu ning jätab endale õiguse eemaldada kuulutusi või kasutajaid, kes rikuvad seadust, toiduohutuse nõudeid või neid tingimusi.</p>
               </div>
             )}
             {legalModal === 'privacy' && (

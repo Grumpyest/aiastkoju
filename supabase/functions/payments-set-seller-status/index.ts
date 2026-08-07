@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
     const user = await requireRequestUser(req);
     const body = await req.json().catch(() => ({}));
     const isSeller = body?.isSeller === true;
+    const acknowledgements = body?.acknowledgements || {};
     const profile = await getProfile(user.id);
 
     if (!profile) {
@@ -44,6 +45,17 @@ Deno.serve(async (req) => {
 
     if (isSeller && (!profile.phone || !profile.location)) {
       return errorResponse('Aedniku staatuse aktiveerimiseks peavad telefon ja asukoht olema profiilis salvestatud.', 400);
+    }
+
+    if (
+      isSeller &&
+      (
+        acknowledgements.primaryProducts !== true ||
+        acknowledgements.smallQuantityOrPtaNotice !== true ||
+        acknowledgements.sellerResponsibility !== true
+      )
+    ) {
+      return errorResponse('Aedniku tingimused tuleb enne aktiveerimist kinnitada.', 400);
     }
 
     await setSellerAccess(user.id, isSeller);

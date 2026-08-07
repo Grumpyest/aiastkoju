@@ -22,6 +22,8 @@ interface GardenerDashboardProps {
 
 const DEFAULT_IMAGE = '/placeholder.png';
 const STRIPE_KEY_MISMATCH_MESSAGE = 'Maksete seadistus vajab ülevaatamist.';
+const ALLOWED_INITIAL_PRODUCT_CATEGORIES = new Set(CATEGORIES);
+const INITIAL_PRODUCT_RULE_TEXT = 'Algfaasis saab lisada ainult enda kasvatatud või korjatud esmatooteid. Hoidised, mahlad, mesi, töödeldud ja loomsed tooted lisa alles siis, kui vastavad nõuded on täidetud.';
 
 const getPayoutOnboardingMessage = (message?: string) => {
   if (!message) {
@@ -627,6 +629,10 @@ const handleSaveNewProduct = async (e: React.FormEvent) => {
   if (!newProduct.title) return;
 
   try {
+    if (!ALLOWED_INITIAL_PRODUCT_CATEGORIES.has(String(newProduct.category || ''))) {
+      throw new Error('See kategooria ei ole algfaasis lubatud.');
+    }
+
     const uploadedExtraUrls: string[] = [];
 
     const { data: created, error: createErr } = await supabase
@@ -743,6 +749,10 @@ const handleSaveEdit = async (e: React.FormEvent) => {
   if (!editingProduct) return;
 
   try {
+    if (!ALLOWED_INITIAL_PRODUCT_CATEGORIES.has(String(editingProduct.category || ''))) {
+      throw new Error('See kategooria ei ole algfaasis lubatud.');
+    }
+
     // 1) update basic product fields
     const { error: updErr } = await supabase
       .from('products')
@@ -1275,6 +1285,9 @@ const handleSaveEdit = async (e: React.FormEvent) => {
               <button onClick={closeAddModal} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
             </div>
             <form onSubmit={handleSaveNewProduct} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-stone-100">
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+                {INITIAL_PRODUCT_RULE_TEXT}
+              </div>
               <div className="space-y-6">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-3 block">Peamine toote pilt</label>
@@ -1350,6 +1363,9 @@ const handleSaveEdit = async (e: React.FormEvent) => {
               <button onClick={closeEditModal} className="text-stone-300 hover:text-stone-600 text-2xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
             </div>
             <form onSubmit={handleSaveEdit} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-stone-100">
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+                {INITIAL_PRODUCT_RULE_TEXT}
+              </div>
               <div className="space-y-6">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-3 block">Peamine toote pilt</label>

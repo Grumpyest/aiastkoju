@@ -195,10 +195,17 @@ export const removeBuyerPaymentCard = async () => {
   return data;
 };
 
-export const setSellerStatus = async (isSeller: boolean) => {
+export const setSellerStatus = async (
+  isSeller: boolean,
+  acknowledgements?: {
+    primaryProducts: boolean;
+    smallQuantityOrPtaNotice: boolean;
+    sellerResponsibility: boolean;
+  }
+) => {
   const { data, error } = await supabase.functions.invoke<{ success?: boolean; isSeller?: boolean }>(
     'payments-set-seller-status',
-    { body: { isSeller } }
+    { body: { isSeller, acknowledgements } }
   );
 
   if (error) {

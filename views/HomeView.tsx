@@ -17,7 +17,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onSearch, onSelectCategory, onViewP
     { name: 'Köögiviljad', icon: 'fa-carrot', color: 'bg-orange-100 text-orange-600' },
     { name: 'Marjad', icon: 'fa-bowl-food', color: 'bg-red-100 text-red-600' },
     { name: 'Puuviljad', icon: 'fa-apple-whole', color: 'bg-emerald-100 text-emerald-600' },
-    { name: 'Mesi & hoidised', icon: 'fa-jar', color: 'bg-yellow-100 text-yellow-600' },
+    { name: 'Maitsetaimed', icon: 'fa-leaf', color: 'bg-lime-100 text-lime-700' },
     { name: 'Seemned', icon: 'fa-seedling', color: 'bg-green-100 text-green-600' },
     { name: 'Muu', icon: 'fa-ellipsis', color: 'bg-stone-100 text-stone-600' },
   ];

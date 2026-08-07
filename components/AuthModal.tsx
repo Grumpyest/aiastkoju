@@ -108,7 +108,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify,
 
     if (regData.role === UserRole.GARDENER) {
       if (!regData.termsAccepted) {
-        onNotify?.('Aednikuna liitumiseks pead nõustuma tingimustega!', 'error');
+        onNotify?.('Aednikuna liitumiseks pead kinnitama esmatoodete ja vastutuse tingimused.', 'error');
         return;
       }
       if (!regData.phone || !regData.location) {
@@ -132,6 +132,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify,
           legal_privacy_accepted_at: acceptedAt,
           legal_cookies_acknowledged_at: acceptedAt,
           seller_terms_accepted_at: regData.role === UserRole.GARDENER ? acceptedAt : null,
+          seller_primary_products_confirmed_at: regData.role === UserRole.GARDENER ? acceptedAt : null,
+          seller_small_quantity_confirmed_at: regData.role === UserRole.GARDENER ? acceptedAt : null,
         },
       },
     });
@@ -265,11 +267,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, setMode, setUser, onNotify,
                 </span>
               </label>
               {regData.role === UserRole.GARDENER && (
-                <label className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100 cursor-pointer">
-                  <input type="checkbox" required checked={regData.termsAccepted} onChange={e => setRegData({ ...regData, termsAccepted: e.target.checked })} className="w-5 h-5 accent-emerald-600" />
+                <label className="flex items-start gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100 cursor-pointer">
+                  <input type="checkbox" required checked={regData.termsAccepted} onChange={e => setRegData({ ...regData, termsAccepted: e.target.checked })} className="mt-0.5 w-5 h-5 accent-emerald-600" />
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-amber-800 uppercase leading-tight">Nõustun aedniku tingimustega</span>
-                    <span className="text-[8px] text-amber-700">Kuutasu puudub. Teenustasu lisandub ainult tellimuse checkoutis.</span>
+                    <span className="text-[10px] font-bold text-amber-800 uppercase leading-tight">Kinnitan aedniku tingimused</span>
+                    <span className="mt-1 text-[11px] leading-relaxed text-amber-800">
+                      Müün algfaasis ainult enda kasvatatud või korjatud esmatooteid väikeses koguses või täidan PTA teavitamise nõudeid.
+                      Vastutan toote ohutuse, info õigsuse, koguse ja üleandmise eest. Töödeldud toitu, hoidiseid, mahla, mett ja loomseid tooteid lisan ainult siis, kui vastavad nõuded on täidetud.
+                    </span>
                   </div>
                 </label>
               )}

@@ -7,8 +7,6 @@ export const CATEGORIES = [
   "Puuviljad",
   "Seemned",
   "Istikud",
-  "Konservid",
-  "Mesi & hoidised",
   "Maitsetaimed",
   "Muu"
 ];

@@ -241,6 +241,21 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
         return;
       }
 
+      const acceptedSellerTerms = confirm(
+        [
+          'Aednikuna kinnitad, et:',
+          '',
+          '- müüd algfaasis ainult enda kasvatatud või korjatud esmatooteid;',
+          '- sinu müük jääb väikeses koguses esmatoodete piiridesse või oled PTA nõuded täitnud;',
+          '- vastutad toote ohutuse, info õigsuse, koguse ja üleandmise eest;',
+          '- töödeldud toitu, hoidiseid, mahla, mett ja loomseid tooteid lisad ainult siis, kui vastavad nõuded on täidetud.',
+        ].join('\n')
+      );
+
+      if (!acceptedSellerTerms) {
+        return;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -257,6 +272,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
         data: {
           phone: nextPhone,
           location: nextLocation,
+          seller_terms_accepted_at: new Date().toISOString(),
         },
       });
 
@@ -271,7 +287,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
       } : prev));
 
       setPaymentAction('seller-status-on');
-      await setSellerStatus(true);
+      await setSellerStatus(true, {
+        primaryProducts: true,
+        smallQuantityOrPtaNotice: true,
+        sellerResponsibility: true,
+      });
       setUser(prev => (prev ? { ...prev, role: UserRole.GARDENER } : prev));
       onNotify?.('Aedniku staatus aktiveeritud.', 'success');
     } catch (err: any) {
