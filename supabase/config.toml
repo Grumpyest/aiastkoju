@@ -1,38 +1,38 @@
 [functions.payments-get-profile]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-create-connect-link]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-create-account-session]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-disconnect-connect-account]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-create-setup-session]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-remove-card]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-set-seller-status]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-create-checkout]
 verify_jwt = false
 
 [functions.payments-sync-order-fees]
-verify_jwt = false
+verify_jwt = true
 
 [functions.orders-update-status]
-verify_jwt = false
+verify_jwt = true
 
 [functions.reviews-create]
-verify_jwt = false
+verify_jwt = true
 
 [functions.review-replies-create]
-verify_jwt = false
+verify_jwt = true
 
 [functions.stripe-webhook]
 verify_jwt = false

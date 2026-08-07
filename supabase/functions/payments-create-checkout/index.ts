@@ -1,6 +1,7 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
 import {
   assertPaymentEnv,
+  assertRateLimit,
   buildSiteCallbackUrl,
   getRequestUser,
   getSiteUrl,
@@ -27,7 +28,6 @@ interface BuyerInput {
 interface CheckoutRequestBody {
   buyer?: BuyerInput;
   items?: CheckoutItemInput[];
-  siteUrl?: string;
 }
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
@@ -77,12 +77,17 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (req.method !== 'POST') {
+    return errorResponse('Method not allowed', 405);
+  }
+
   try {
     assertPaymentEnv();
+    await assertRateLimit(req, 'checkout', 30, 3600);
 
     const user = await getRequestUser(req);
     const body = await req.json() as CheckoutRequestBody;
-    const siteUrl = getSiteUrl(req, body?.siteUrl);
+    const siteUrl = getSiteUrl(req);
     const successUrl = buildSiteCallbackUrl(siteUrl, { payment: 'success' });
     const cancelUrl = buildSiteCallbackUrl(siteUrl, { payment: 'cancelled' });
     const buyer = body?.buyer as BuyerInput;
@@ -105,7 +110,31 @@ Deno.serve(async (req) => {
       return errorResponse('Ostukorv on tühi.', 400);
     }
 
-    const productIds = [...new Set(items.map(item => String(item.productId)).filter(Boolean))];
+    if (items.length > 50) {
+      return errorResponse('Ostukorvis on liiga palju ridu.', 400);
+    }
+
+    const itemQuantitiesByProduct = new Map<string, number>();
+
+    for (const item of items) {
+      const productId = String(item.productId || '').trim();
+      const quantity = Number(item.quantity || 0);
+
+      if (!productId || !Number.isFinite(quantity) || quantity <= 0) {
+        return errorResponse('Ostukorvi kogus voi toode ei ole korrektne.', 400);
+      }
+
+      itemQuantitiesByProduct.set(
+        productId,
+        (itemQuantitiesByProduct.get(productId) || 0) + quantity
+      );
+    }
+
+    const normalizedItems = [...itemQuantitiesByProduct.entries()].map(([productId, quantity]) => ({
+      productId,
+      quantity,
+    }));
+    const productIds = normalizedItems.map(item => item.productId);
     const { data: productRows, error: productsError } = await supabaseAdmin
       .from('products')
       .select('id,seller_id,title,price_cents,price_basis,unit,stock_qty,min_order_qty,is_active,status')
@@ -127,7 +156,7 @@ Deno.serve(async (req) => {
     }
 
     const sellersById = new Map((sellerRows || []).map((seller: any) => [String(seller.id), seller]));
-    const cartItems = items.map(item => {
+    const cartItems = normalizedItems.map(item => {
       const product = productsById.get(String(item.productId));
 
       if (!product) {

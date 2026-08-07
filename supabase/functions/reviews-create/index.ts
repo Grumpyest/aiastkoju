@@ -1,5 +1,5 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
-import { assertSupabaseEnv, getProfile, requireRequestUser, supabaseAdmin } from '../_shared/stripe.ts';
+import { assertRateLimit, assertSupabaseEnv, getProfile, requireRequestUser, supabaseAdmin } from '../_shared/stripe.ts';
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
 
@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
     assertSupabaseEnv();
 
     const user = await requireRequestUser(req);
+    await assertRateLimit(req, 'reviews-create', 20, 3600, user.id);
     const body = await req.json().catch(() => ({}));
     const orderId = String(body?.orderId || '').trim();
     const productId = String(body?.productId || '').trim();

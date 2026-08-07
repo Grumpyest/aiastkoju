@@ -314,6 +314,10 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (req.method !== 'POST') {
+    return errorResponse('Method not allowed', 405);
+  }
+
   const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 
   if (!webhookSecret) {

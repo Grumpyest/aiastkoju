@@ -1,5 +1,5 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
-import { assertPaymentEnv, ensureStripeCustomer, getProfile, getSiteUrl, requireRequestUser, stripe } from '../_shared/stripe.ts';
+import { assertPaymentEnv, assertRateLimit, ensureStripeCustomer, getProfile, getSiteUrl, requireRequestUser, stripe } from '../_shared/stripe.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -10,6 +10,7 @@ Deno.serve(async (req) => {
     assertPaymentEnv();
 
     const user = await requireRequestUser(req);
+    await assertRateLimit(req, 'setup-session', 10, 3600, user.id);
     const profile = await getProfile(user.id);
     const siteUrl = getSiteUrl(req);
     const customerId = await ensureStripeCustomer({

@@ -19,8 +19,15 @@ export const cleanPhone = (value: unknown) =>
 export const cleanUrlPathPart = (value: unknown) =>
   cleanText(value, 160).replace(/[^a-zA-Z0-9._-]/g, '_');
 
+export const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
+
 export const assertSafeImageFile = (file: File, maxBytes = 5 * 1024 * 1024) => {
-  if (!file.type.startsWith('image/')) {
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
     throw new Error('Lubatud on ainult pildifailid.');
   }
 

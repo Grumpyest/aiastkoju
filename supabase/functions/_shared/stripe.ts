@@ -91,11 +91,9 @@ const toAbsoluteSiteUrl = (value?: string | null) => {
   }
 };
 
-export const getSiteUrl = (req: Request, fallbackUrl?: string | null) => {
+export const getSiteUrl = (_req?: Request, _fallbackUrl?: string | null) => {
   const configuredUrl = toAbsoluteSiteUrl(Deno.env.get('SITE_URL'));
-  const bodyUrl = toAbsoluteSiteUrl(fallbackUrl);
-  const origin = toAbsoluteSiteUrl(req.headers.get('origin'));
-  return configuredUrl || bodyUrl || origin || 'https://aiastkoju.vercel.app';
+  return configuredUrl || 'https://aiastkoju.vercel.app';
 };
 
 export const buildSiteCallbackUrl = (siteUrl: string, params: Record<string, string>) => {
@@ -135,6 +133,71 @@ export const requireRequestUser = async (req: Request) => {
   }
 
   return user;
+};
+
+const getClientIp = (req: Request) => {
+  const forwardedFor = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  return forwardedFor || req.headers.get('cf-connecting-ip') || 'unknown';
+};
+
+export const assertRateLimit = async (
+  req: Request,
+  scope: string,
+  limit: number,
+  windowSeconds: number,
+  userId?: string | null
+) => {
+  assertSupabaseEnv();
+
+  const identifier = userId || getClientIp(req);
+  const key = `${scope}:${identifier}`;
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowSeconds * 1000).toISOString();
+
+  const { data: current, error: selectError } = await supabaseAdmin
+    .from('edge_rate_limits')
+    .select('count,reset_at')
+    .eq('key', key)
+    .maybeSingle();
+
+  if (selectError) {
+    throw selectError;
+  }
+
+  const currentResetAt = current?.reset_at ? new Date(current.reset_at) : null;
+
+  if (!current || !currentResetAt || currentResetAt <= now) {
+    const { error } = await supabaseAdmin
+      .from('edge_rate_limits')
+      .upsert({
+        key,
+        count: 1,
+        reset_at: resetAt,
+        updated_at: now.toISOString(),
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    return;
+  }
+
+  if (Number(current.count || 0) >= limit) {
+    throw new Error('Liiga palju päringuid. Proovi mõne aja pärast uuesti.');
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('edge_rate_limits')
+    .update({
+      count: Number(current.count || 0) + 1,
+      updated_at: now.toISOString(),
+    })
+    .eq('key', key);
+
+  if (updateError) {
+    throw updateError;
+  }
 };
 
 export const getProfile = async (userId: string) => {

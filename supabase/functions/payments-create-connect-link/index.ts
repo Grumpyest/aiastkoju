@@ -1,6 +1,7 @@
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
 import {
   assertPaymentEnv,
+  assertRateLimit,
   getProfile,
   getSiteUrl,
   normalizeOptionalEmail,
@@ -28,6 +29,7 @@ Deno.serve(async (req) => {
     assertPaymentEnv();
 
     const user = await requireRequestUser(req);
+    await assertRateLimit(req, 'connect-link', 20, 3600, user.id);
     const profile = await getProfile(user.id);
 
     if (!profile) {
