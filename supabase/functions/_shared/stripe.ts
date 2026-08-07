@@ -7,13 +7,13 @@ const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 export const assertSupabaseEnv = () => {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('SUPABASE_URL või SUPABASE_SERVICE_ROLE_KEY puudub Supabase Edge Function env-is.');
+    throw new Error('Teenuse seadistus on puudulik.');
   }
 };
 
 export const assertPaymentEnv = () => {
   if (!stripeSecretKey) {
-    throw new Error('STRIPE_SECRET_KEY puudub Supabase Edge Function secrets hulgas.');
+    throw new Error('Maksete seadistus on puudulik.');
   }
 
   assertSupabaseEnv();

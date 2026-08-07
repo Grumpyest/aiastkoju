@@ -21,11 +21,11 @@ interface GardenerDashboardProps {
 }
 
 const DEFAULT_IMAGE = '/placeholder.png';
-const STRIPE_KEY_MISMATCH_MESSAGE = 'Stripe vÃµtmed ei klapi. Kontrolli Supabase Edge Function secrets all, et STRIPE_SECRET_KEY ja STRIPE_PUBLISHABLE_KEY oleksid samast Stripe kontost ning mÃµlemad kas test- vÃµi live-reÅ¾iimist.';
+const STRIPE_KEY_MISMATCH_MESSAGE = 'Maksete seadistus vajab ülevaatamist.';
 
 const getPayoutOnboardingMessage = (message?: string) => {
   if (!message) {
-    return 'Stripe seadistusvaadet ei saanud laadida.';
+    return 'Seadistusvaadet ei saanud laadida.';
   }
 
   if (
@@ -161,12 +161,12 @@ const GardenerDashboard: React.FC<GardenerDashboardProps> = ({
     ? 'Kontot kontrollitakse'
     : 'Väljamakse konto puudub';
   const payoutDescription = payoutStatus === 'ready'
-    ? 'Ostude raha saab liikuda sinu ühendatud väljamakse kontole.'
+    ? 'Ostude raha saab liikuda sinu ühendatud kontole.'
     : payoutStatus === 'action'
-    ? "Stripe vajab sinu poolt lisakinnitust, näiteks passi, ID-kaardi või muu isikut tõendava dokumendiga. Vajuta \"Halda väljamakse kontot\" ja lõpeta Stripe'i juhised."
+    ? 'Lõpeta väljamakse konto kinnitamine.'
     : payoutStatus === 'review'
-    ? 'Kontot kontrollitakse. Kui kontroll on valmis, aktiveeruvad väljamaksed automaatselt.'
-    : 'Ühenda Stripe väljamakse konto, et ostude raha sinuni jõuaks.';
+    ? 'Kontot kontrollitakse. Väljamaksed aktiveeruvad pärast kinnitamist.'
+    : 'Ühenda väljamakse konto, et ostude raha sinuni jõuaks.';
   const payoutMethodLabel = paymentProfile?.payoutMethod?.last4
     ? (paymentProfile.payoutMethod.brand || 'Konto') + ' ****' + paymentProfile.payoutMethod.last4
     : 'Kontot pole veel ühendatud';
@@ -1431,7 +1431,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-2">Aedniku väljamakse</p>
                 <h2 className="text-2xl font-black text-stone-900">Ühenda raha vastuvõtmine</h2>
                 <p className="text-sm text-stone-500 mt-2 max-w-2xl">
-                  Täida Stripe'i turvaline seadistus siin samas aknas. Aiast Koju veebileht ja tegevuse kirjeldus on eeltäidetud, sina lisad ainult nõutud isiku- ja väljamakse andmed.
+                  Lisa vajalikud andmed, et ostude raha saaks sinuni liikuda.
                 </p>
               </div>
               <button
@@ -1466,7 +1466,7 @@ const handleSaveEdit = async (e: React.FormEvent) => {
               {isPayoutOnboardingLoading && (
                 <div className="mb-4 rounded-3xl border border-stone-100 bg-white p-5 text-sm font-bold text-stone-500 flex items-center gap-3">
                   <span className="w-5 h-5 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin"></span>
-                  Laeme turvalist Stripe seadistusvaadet...
+                  Laeme seadistusvaadet...
                 </div>
               )}
 

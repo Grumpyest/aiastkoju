@@ -104,10 +104,25 @@ export const getPaymentProfile = async (options: { refreshStripe?: boolean } = {
 
 export const getFunctionErrorMessage = async (error: any) => {
   const fallback = error?.message || 'Makse tegevus ebaõnnestus.';
+  const cleanMessage = (message: unknown) => {
+    const text = String(message || fallback);
+
+    if (
+      /STRIPE_|SUPABASE_|SERVICE_ROLE|PUBLISHABLE_KEY|SECRET_KEY|Edge Function|client secret|account session/i.test(text)
+    ) {
+      return 'Makse seadistust ei saanud avada. Proovi hiljem uuesti.';
+    }
+
+    if (/signed up for Connect|Stripe Connect ei ole platvormi/i.test(text)) {
+      return 'Väljamaksete seadistus vajab platvormi poolel lõpetamist.';
+    }
+
+    return text;
+  };
   const response = error?.context;
 
   if (!response) {
-    return fallback;
+    return cleanMessage(fallback);
   }
 
   try {
@@ -115,17 +130,17 @@ export const getFunctionErrorMessage = async (error: any) => {
     const payload = await clonedResponse.json();
 
     if (payload?.error) {
-      return String(payload.error);
+      return cleanMessage(payload.error);
     }
 
     if (payload?.message) {
-      return String(payload.message);
+      return cleanMessage(payload.message);
     }
   } catch {
-    return fallback;
+    return cleanMessage(fallback);
   }
 
-  return fallback;
+  return cleanMessage(fallback);
 };
 
 export const createConnectAccountSession = async () => {

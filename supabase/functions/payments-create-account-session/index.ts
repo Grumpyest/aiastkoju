@@ -11,7 +11,7 @@ import {
 } from '../_shared/stripe.ts';
 
 const connectSetupResponse = () => jsonResponse({
-  error: 'Stripe Connect ei ole platvormi Stripe kontol veel lõpuni aktiveeritud. Ava Stripe Dashboardis Connect seadistus ja proovi siis uuesti.',
+  error: 'Väljamaksete seadistus vajab platvormi poolel lõpetamist.',
   setupUrl: 'https://dashboard.stripe.com/connect',
 });
 
@@ -43,11 +43,11 @@ const validatePublishableKey = (publishableKey: string) => {
   const publishableMode = getStripeKeyMode(publishableKey, 'pk_test_', 'pk_live_');
 
   if (!publishableMode) {
-    return 'STRIPE_PUBLISHABLE_KEY peab algama pk_test_ vÃµi pk_live_.';
+    return 'Maksete seadistus on puudulik.';
   }
 
   if (secretMode && secretMode !== publishableMode) {
-    return 'Stripe vÃµtmed ei klapi: STRIPE_SECRET_KEY ja STRIPE_PUBLISHABLE_KEY peavad olema samast test/live reÅ¾iimist ja samalt Stripe kontolt.';
+    return 'Maksete seadistus vajab ülevaatamist.';
   }
 
   return null;
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     const publishableKey = Deno.env.get('STRIPE_PUBLISHABLE_KEY')?.trim();
 
     if (!publishableKey) {
-      return errorResponse('STRIPE_PUBLISHABLE_KEY puudub Supabase Edge Function secrets hulgas.', 500);
+      return errorResponse('Maksete seadistus on puudulik.', 500);
     }
 
     const publishableKeyError = validatePublishableKey(publishableKey);

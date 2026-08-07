@@ -142,7 +142,7 @@ const CookieConsent: React.FC = () => {
               <h2 className="text-base font-black text-stone-950">Küpsiste valikud</h2>
             </div>
             <p className="max-w-3xl text-sm leading-relaxed text-stone-600">
-              Kasutame hädavajalikke küpsiseid ja kohalikku salvestust lehe turvaliseks toimimiseks. Valikulisi küpsiseid kasutame ainult siis, kui annad selleks loa.
+              Kasutame vajalikke küpsiseid ja salvestust ostukorvi ning konto toimimiseks. Valikulised küpsised jäävad sinu otsustada.
             </p>
 
             {isCustomizing && (
@@ -152,7 +152,7 @@ const CookieConsent: React.FC = () => {
                     <p className="text-sm font-black text-stone-900">Hädavajalikud</p>
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Alati sees</span>
                   </div>
-                  <p className="mt-2 text-xs leading-relaxed text-stone-500">Vajalikud ostukorvi, sisselogimise, maksete ja turvalisuse jaoks.</p>
+                  <p className="mt-2 text-xs leading-relaxed text-stone-500">Vajalikud ostukorvi, sisselogimise ja maksete jaoks.</p>
                 </div>
                 {OPTIONAL_CATEGORIES.map(category => (
                   <label key={category.key} className="rounded-xl border border-stone-200 p-4 transition-colors hover:border-emerald-300">

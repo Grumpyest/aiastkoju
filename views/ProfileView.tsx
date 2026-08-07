@@ -474,7 +474,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-stone-400">Maksed</p>
               <h3 className="text-lg font-bold text-stone-900">Maksekaart</h3>
               <p className="mt-2 text-sm text-stone-500">
-                Kaardiandmed salvestatakse Stripe'is. Aiast Koju kuvab ainult kaardi tüübi ja viimased 4 numbrit.
+                Kaardi täisandmeid Aiast Koju ei salvesta. Kuvame ainult kaardi tüübi ja viimased 4 numbrit.
               </p>
             </div>
 
@@ -506,7 +506,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, setUser, setCurrentView
                   className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {paymentAction === 'buyer-card'
-                    ? 'Avame Stripe...'
+                    ? 'Avame maksevaadet...'
                     : paymentProfile?.buyerCard
                     ? 'Uuenda kaarti'
                     : 'Salvesta kaart'}

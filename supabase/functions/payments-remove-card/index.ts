@@ -83,6 +83,6 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ success: true, removedCount });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Maksekaardi eemaldamine ebaÃµnnestus.', 400);
+    return errorResponse(error instanceof Error ? error.message : 'Maksekaardi eemaldamine ebaõnnestus.', 400);
   }
 });

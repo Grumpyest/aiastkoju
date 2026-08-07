@@ -481,11 +481,11 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <div className="text-sm text-amber-900">
                   <p className="font-bold">Oluline info!</p>
                   <p className="opacity-80">
-                    Makse toimub turvaliselt Stripe'is. Ostja maksab ainult toodete summa. Platvormitasu {PLATFORM_SERVICE_FEE_EUR.toFixed(2)}€ iga müüja tellimuse kohta ning Stripe'i teenustasu arvestatakse müüja väljamaksest maha.
+                    Makse toimub turvaliselt. Ostja maksab ainult toodete summa. Teenustasud arvestatakse müüja väljamaksest.
                   </p>
                   {sellerOrderCount > 1 && (
                     <p className="opacity-80 mt-2">
-                      Ostukorvis on praegu {sellerOrderCount} eri müüjat, seega arvestatakse tasud iga müüja tellimuse pealt eraldi nende väljamakses.
+                      Ostukorvis on {sellerOrderCount} müüjat, seega jagatakse tellimus müüjate kaupa.
                     </p>
                   )}
                 </div>
