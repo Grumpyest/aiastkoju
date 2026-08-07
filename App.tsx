@@ -1018,9 +1018,12 @@ const App: React.FC = () => {
             {legalModal === 'cookies' && (
               <div className="space-y-4 text-stone-700 leading-relaxed">
                 <h2 className="text-2xl font-bold mb-4">Küpsiste poliitika</h2>
-                <p>Kasutame hädavajalikke küpsiseid ja brauseri kohalikku salvestust, et ostukorv, sisselogimine, maksed, keeleseaded ja turvafunktsioonid töötaksid korrektselt.</p>
-                <p>Valikulised küpsised jagunevad funktsionaalseteks, analüütika ja turunduse küpsisteks. Neid kasutatakse ainult sinu nõusolekul ning neid saab esmasel külastusel osaliselt lubada, kõik lubada või kõigist valikulistest küpsistest keelduda.</p>
-                <p>Kui valid “Keeldu kõigist”, jäävad tööle ainult teenuse toimimiseks vajalikud küpsised. Makseid töötleb Stripe ning sellega seotud küpsiseid kasutatakse maksete turvaliseks teostamiseks.</p>
+                <p>Aiast Koju kasutab küpsiseid ja brauseri kohalikku salvestust ainult selgelt määratud eesmärkidel. Vajalikud küpsised ja salvestus toetavad ostukorvi, sisselogimist, keelevalikut, turvafunktsioone ja maksevoogu.</p>
+                <p>Valikulised küpsised jagunevad funktsionaalseteks, analüütika ja turunduse küpsisteks. Funktsionaalsed küpsised hoiavad meeles mugavusseadeid. Analüütika aitab koondstatistikana mõista, kuidas teenust kasutatakse. Turundusküpsiseid kasutatakse ainult siis, kui tulevikus lisanduvad kampaaniad või sarnased pakkumised.</p>
+                <p>Valikulisi küpsiseid ei kasutata enne sinu nõusolekut. Saad lubada kõik, valida kategooriad eraldi või keelduda kõigist valikulistest küpsistest. Keeldumisel jäävad tööle ainult teenuse toimimiseks vajalikud küpsised.</p>
+                <p>Nõusoleku valik salvestatakse brauserisse võtmega <span className="font-mono text-xs">aiast-koju-cookie-consent-v1</span>. Ostukorv, keeleseade ja asukohafiltri eelistus võivad samuti olla salvestatud sinu brauserisse, et teenus töötaks ka lehe uuesti avamisel.</p>
+                <p>Makseid töötleb makseteenuse pakkuja ning makse käigus võivad rakenduda selle teenuse vajalikud küpsised või turvameetmed. Aiast Koju ei salvesta kaardi täisandmeid.</p>
+                <p>Saad oma küpsiste valikut igal ajal muuta allolevast nupust. Brauserisse salvestatud andmeid saab eemaldada ka brauseri seadete kaudu.</p>
                 <button
                   type="button"
                   onClick={() => {

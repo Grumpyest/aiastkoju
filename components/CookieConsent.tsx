@@ -22,17 +22,17 @@ const OPTIONAL_CATEGORIES: Array<{
   {
     key: 'functional',
     title: 'Funktsionaalsed',
-    description: 'Hoiavad meeles mugavusseadeid, näiteks eelistusi ja kasutusvalikuid.',
+    description: 'Hoiavad meeles mugavusseadeid, näiteks keelevalikut ja eelistusi.',
   },
   {
     key: 'analytics',
     title: 'Analüütika',
-    description: 'Aitavad mõista, kuidas lehte kasutatakse. Kasutame neid ainult sinu loal.',
+    description: 'Aitavad mõista lehe kasutust koondstatistikana. Neid kasutatakse ainult sinu loal.',
   },
   {
     key: 'marketing',
     title: 'Turundus',
-    description: 'Võimaldavad asjakohasemat sisu ja kampaaniaid, kui need tulevikus lisanduvad.',
+    description: 'Võimaldavad kampaaniaid või sarnaseid pakkumisi, kui need tulevikus lisanduvad.',
   },
 ];
 
@@ -142,7 +142,7 @@ const CookieConsent: React.FC = () => {
               <h2 className="text-base font-black text-stone-950">Küpsiste valikud</h2>
             </div>
             <p className="max-w-3xl text-sm leading-relaxed text-stone-600">
-              Kasutame vajalikke küpsiseid ja salvestust ostukorvi ning konto toimimiseks. Valikulised küpsised jäävad sinu otsustada.
+              Kasutame vajalikke küpsiseid ja brauseri salvestust ostukorvi, konto ja maksevoo toimimiseks. Valikulised küpsised jäävad sinu otsustada.
             </p>
 
             {isCustomizing && (
@@ -152,7 +152,7 @@ const CookieConsent: React.FC = () => {
                     <p className="text-sm font-black text-stone-900">Hädavajalikud</p>
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Alati sees</span>
                   </div>
-                  <p className="mt-2 text-xs leading-relaxed text-stone-500">Vajalikud ostukorvi, sisselogimise ja maksete jaoks.</p>
+                  <p className="mt-2 text-xs leading-relaxed text-stone-500">Vajalikud ostukorvi, sisselogimise, turva ja maksevoo jaoks. Neid ei saa välja lülitada.</p>
                 </div>
                 {OPTIONAL_CATEGORIES.map(category => (
                   <label key={category.key} className="rounded-xl border border-stone-200 p-4 transition-colors hover:border-emerald-300">
